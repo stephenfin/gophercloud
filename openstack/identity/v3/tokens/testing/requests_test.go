@@ -14,7 +14,7 @@ import (
 )
 
 // authTokenPost verifies that providing certain AuthOptions and Scope results in an expected JSON structure.
-func authTokenPost(t *testing.T, options tokens.AuthOptions, scope *tokens.Scope, requestJSON string) {
+func authTokenPost(t *testing.T, options gophercloud.AuthOptionsV3, scope *tokens.Scope, requestJSON string) {
 	testhelper.SetupHTTP()
 	defer testhelper.TeardownHTTP()
 
@@ -49,7 +49,7 @@ func authTokenPost(t *testing.T, options tokens.AuthOptions, scope *tokens.Scope
 	testhelper.CheckDeepEquals(t, expected, actual)
 }
 
-func authTokenPostErr(t *testing.T, options tokens.AuthOptions, scope *tokens.Scope, includeToken bool, expectedErr error) {
+func authTokenPostErr(t *testing.T, options gophercloud.AuthOptionsV3, scope *tokens.Scope, includeToken bool, expectedErr error) {
 	testhelper.SetupHTTP()
 	defer testhelper.TeardownHTTP()
 
@@ -75,7 +75,7 @@ func authTokenPostErr(t *testing.T, options tokens.AuthOptions, scope *tokens.Sc
 }
 
 func TestCreateUserIDAndPassword(t *testing.T) {
-	authTokenPost(t, tokens.AuthOptions{UserID: "me", Password: "squirrel!"}, nil, `
+	authTokenPost(t, gophercloud.AuthOptionsV3{UserID: "me", Password: "squirrel!"}, nil, `
 		{
 			"auth": {
 				"identity": {
@@ -90,7 +90,7 @@ func TestCreateUserIDAndPassword(t *testing.T) {
 }
 
 func TestCreateUsernameDomainIDPassword(t *testing.T) {
-	authTokenPost(t, tokens.AuthOptions{Username: "fakey", Password: "notpassword", DomainID: "abc123"}, nil, `
+	authTokenPost(t, gophercloud.AuthOptionsV3{Username: "fakey", Password: "notpassword", DomainID: "abc123"}, nil, `
 		{
 			"auth": {
 				"identity": {
@@ -111,7 +111,7 @@ func TestCreateUsernameDomainIDPassword(t *testing.T) {
 }
 
 func TestCreateUsernameDomainNamePassword(t *testing.T) {
-	authTokenPost(t, tokens.AuthOptions{Username: "frank", Password: "swordfish", DomainName: "spork.net"}, nil, `
+	authTokenPost(t, gophercloud.AuthOptionsV3{Username: "frank", Password: "swordfish", DomainName: "spork.net"}, nil, `
 		{
 			"auth": {
 				"identity": {
@@ -132,7 +132,7 @@ func TestCreateUsernameDomainNamePassword(t *testing.T) {
 }
 
 func TestCreateTokenID(t *testing.T) {
-	authTokenPost(t, tokens.AuthOptions{TokenID: "12345abcdef"}, nil, `
+	authTokenPost(t, gophercloud.AuthOptionsV3{TokenID: "12345abcdef"}, nil, `
 		{
 			"auth": {
 				"identity": {
@@ -147,7 +147,7 @@ func TestCreateTokenID(t *testing.T) {
 }
 
 func TestCreateProjectIDScope(t *testing.T) {
-	options := tokens.AuthOptions{UserID: "someuser", Password: "somepassword"}
+	options := gophercloud.AuthOptionsV3{UserID: "someuser", Password: "somepassword"}
 	scope := &tokens.Scope{ProjectID: "123456"}
 	authTokenPost(t, options, scope, `
 		{
@@ -172,7 +172,7 @@ func TestCreateProjectIDScope(t *testing.T) {
 }
 
 func TestCreateDomainIDScope(t *testing.T) {
-	options := tokens.AuthOptions{UserID: "someuser", Password: "somepassword"}
+	options := gophercloud.AuthOptionsV3{UserID: "someuser", Password: "somepassword"}
 	scope := &tokens.Scope{DomainID: "1000"}
 	authTokenPost(t, options, scope, `
 		{
@@ -197,7 +197,7 @@ func TestCreateDomainIDScope(t *testing.T) {
 }
 
 func TestCreateDomainNameScope(t *testing.T) {
-	options := tokens.AuthOptions{UserID: "someuser", Password: "somepassword"}
+	options := gophercloud.AuthOptionsV3{UserID: "someuser", Password: "somepassword"}
 	scope := &tokens.Scope{DomainName: "evil-plans"}
 	authTokenPost(t, options, scope, `
 		{
@@ -222,7 +222,7 @@ func TestCreateDomainNameScope(t *testing.T) {
 }
 
 func TestCreateProjectNameAndDomainIDScope(t *testing.T) {
-	options := tokens.AuthOptions{UserID: "someuser", Password: "somepassword"}
+	options := gophercloud.AuthOptionsV3{UserID: "someuser", Password: "somepassword"}
 	scope := &tokens.Scope{ProjectName: "world-domination", DomainID: "1000"}
 	authTokenPost(t, options, scope, `
 		{
@@ -250,7 +250,7 @@ func TestCreateProjectNameAndDomainIDScope(t *testing.T) {
 }
 
 func TestCreateProjectNameAndDomainNameScope(t *testing.T) {
-	options := tokens.AuthOptions{UserID: "someuser", Password: "somepassword"}
+	options := gophercloud.AuthOptionsV3{UserID: "someuser", Password: "somepassword"}
 	scope := &tokens.Scope{ProjectName: "world-domination", DomainName: "evil-plans"}
 	authTokenPost(t, options, scope, `
 		{
@@ -278,7 +278,7 @@ func TestCreateProjectNameAndDomainNameScope(t *testing.T) {
 }
 
 func TestCreateSystemScope(t *testing.T) {
-	options := tokens.AuthOptions{UserID: "someuser", Password: "somepassword"}
+	options := gophercloud.AuthOptionsV3{UserID: "someuser", Password: "somepassword"}
 	scope := &tokens.Scope{System: true}
 	authTokenPost(t, options, scope, `
 		{
@@ -395,7 +395,7 @@ func TestCreateUserIDPasswordTrustID(t *testing.T) {
 	if err != nil {
 		t.Errorf("ExtractTrust returned an error: %v", err)
 	}
-	expectedTrust := &tokens.Trust{
+	expectedTrust := &tokens.ScopeTrust{
 		ID:            "95946f9eef864fdc993079d8fe3e5747",
 		Impersonation: false,
 		TrusteeUserID: tokens.TrustUser{
@@ -409,7 +409,7 @@ func TestCreateUserIDPasswordTrustID(t *testing.T) {
 }
 
 func TestCreateApplicationCredentialIDAndSecret(t *testing.T) {
-	authTokenPost(t, tokens.AuthOptions{ApplicationCredentialID: "12345abcdef", ApplicationCredentialSecret: "mysecret"}, nil, `
+	authTokenPost(t, gophercloud.AuthOptionsV3{ApplicationCredentialID: "12345abcdef", ApplicationCredentialSecret: "mysecret"}, nil, `
 		{
 			"auth": {
 				"identity": {
@@ -427,7 +427,7 @@ func TestCreateApplicationCredentialIDAndSecret(t *testing.T) {
 }
 
 func TestCreateApplicationCredentialNameAndSecret(t *testing.T) {
-	authTokenPost(t, tokens.AuthOptions{ApplicationCredentialName: "myappcred", ApplicationCredentialSecret: "mysecret", Username: "someuser", DomainName: "evil-plans"}, nil, `
+	authTokenPost(t, gophercloud.AuthOptionsV3{ApplicationCredentialName: "myappcred", ApplicationCredentialSecret: "mysecret", Username: "someuser", DomainName: "evil-plans"}, nil, `
 		{
 			"auth": {
 				"identity": {
@@ -451,7 +451,7 @@ func TestCreateApplicationCredentialNameAndSecret(t *testing.T) {
 }
 
 func TestCreateTOTPProjectNameAndDomainNameScope(t *testing.T) {
-	options := tokens.AuthOptions{UserID: "someuser", Passcode: "12345678"}
+	options := gophercloud.AuthOptionsV3{UserID: "someuser", Passcode: "12345678"}
 	scope := &tokens.Scope{ProjectName: "world-domination", DomainName: "evil-plans"}
 	authTokenPost(t, options, scope, `
 		{
@@ -479,7 +479,7 @@ func TestCreateTOTPProjectNameAndDomainNameScope(t *testing.T) {
 }
 
 func TestCreatePasswordTOTPProjectNameAndDomainNameScope(t *testing.T) {
-	options := tokens.AuthOptions{UserID: "someuser", Password: "somepassword", Passcode: "12345678"}
+	options := gophercloud.AuthOptionsV3{UserID: "someuser", Password: "somepassword", Passcode: "12345678"}
 	scope := &tokens.Scope{ProjectName: "world-domination", DomainName: "evil-plans"}
 	authTokenPost(t, options, scope, `
 		{
@@ -532,7 +532,7 @@ func TestCreateExtractsTokenFromResponse(t *testing.T) {
 		}`)
 	})
 
-	options := tokens.AuthOptions{UserID: "me", Password: "shhh"}
+	options := gophercloud.AuthOptionsV3{UserID: "me", Password: "shhh"}
 	token, err := tokens.Create(context.TODO(), &client, &options).Extract()
 	if err != nil {
 		t.Fatalf("Create returned an error: %v", err)
@@ -544,32 +544,32 @@ func TestCreateExtractsTokenFromResponse(t *testing.T) {
 }
 
 func TestCreateFailureEmptyAuth(t *testing.T) {
-	authTokenPostErr(t, tokens.AuthOptions{}, nil, false, gophercloud.ErrMissingPassword{})
+	authTokenPostErr(t, gophercloud.AuthOptionsV3{}, nil, false, gophercloud.ErrMissingPassword{})
 }
 
 func TestCreateFailureTokenIDUsername(t *testing.T) {
-	authTokenPostErr(t, tokens.AuthOptions{Username: "something", TokenID: "12345"}, nil, true, gophercloud.ErrUsernameWithToken{})
+	authTokenPostErr(t, gophercloud.AuthOptionsV3{Username: "something", TokenID: "12345"}, nil, true, gophercloud.ErrUsernameWithToken{})
 }
 
 func TestCreateFailureTokenIDUserID(t *testing.T) {
-	authTokenPostErr(t, tokens.AuthOptions{UserID: "something", TokenID: "12345"}, nil, true, gophercloud.ErrUserIDWithToken{})
+	authTokenPostErr(t, gophercloud.AuthOptionsV3{UserID: "something", TokenID: "12345"}, nil, true, gophercloud.ErrUserIDWithToken{})
 }
 
 func TestCreateFailureTokenIDDomainID(t *testing.T) {
-	authTokenPostErr(t, tokens.AuthOptions{DomainID: "something", TokenID: "12345"}, nil, true, gophercloud.ErrDomainIDWithToken{})
+	authTokenPostErr(t, gophercloud.AuthOptionsV3{DomainID: "something", TokenID: "12345"}, nil, true, gophercloud.ErrDomainIDWithToken{})
 }
 
 func TestCreateFailureTokenIDDomainName(t *testing.T) {
-	authTokenPostErr(t, tokens.AuthOptions{DomainName: "something", TokenID: "12345"}, nil, true, gophercloud.ErrDomainNameWithToken{})
+	authTokenPostErr(t, gophercloud.AuthOptionsV3{DomainName: "something", TokenID: "12345"}, nil, true, gophercloud.ErrDomainNameWithToken{})
 }
 
 func TestCreateFailureMissingUser(t *testing.T) {
-	options := tokens.AuthOptions{Password: "supersecure"}
+	options := gophercloud.AuthOptionsV3{Password: "supersecure"}
 	authTokenPostErr(t, options, nil, false, gophercloud.ErrUsernameOrUserID{})
 }
 
 func TestCreateFailureBothUser(t *testing.T) {
-	options := tokens.AuthOptions{
+	options := gophercloud.AuthOptionsV3{
 		Password: "supersecure",
 		Username: "oops",
 		UserID:   "redundancy",
@@ -578,7 +578,7 @@ func TestCreateFailureBothUser(t *testing.T) {
 }
 
 func TestCreateFailureMissingDomain(t *testing.T) {
-	options := tokens.AuthOptions{
+	options := gophercloud.AuthOptionsV3{
 		Password: "supersecure",
 		Username: "notuniqueenough",
 	}
@@ -586,7 +586,7 @@ func TestCreateFailureMissingDomain(t *testing.T) {
 }
 
 func TestCreateFailureBothDomain(t *testing.T) {
-	options := tokens.AuthOptions{
+	options := gophercloud.AuthOptionsV3{
 		Password:   "supersecure",
 		Username:   "someone",
 		DomainID:   "hurf",
@@ -596,7 +596,7 @@ func TestCreateFailureBothDomain(t *testing.T) {
 }
 
 func TestCreateFailureUserIDDomainID(t *testing.T) {
-	options := tokens.AuthOptions{
+	options := gophercloud.AuthOptionsV3{
 		UserID:   "100",
 		Password: "stuff",
 		DomainID: "oops",
@@ -605,7 +605,7 @@ func TestCreateFailureUserIDDomainID(t *testing.T) {
 }
 
 func TestCreateFailureUserIDDomainName(t *testing.T) {
-	options := tokens.AuthOptions{
+	options := gophercloud.AuthOptionsV3{
 		UserID:     "100",
 		Password:   "sssh",
 		DomainName: "oops",
@@ -614,38 +614,38 @@ func TestCreateFailureUserIDDomainName(t *testing.T) {
 }
 
 func TestCreateFailureScopeProjectNameAlone(t *testing.T) {
-	options := tokens.AuthOptions{UserID: "myself", Password: "swordfish"}
+	options := gophercloud.AuthOptionsV3{UserID: "myself", Password: "swordfish"}
 	scope := &tokens.Scope{ProjectName: "notenough"}
 	authTokenPostErr(t, options, scope, false, gophercloud.ErrScopeDomainIDOrDomainName{})
 }
 
 func TestCreateFailureScopeProjectNameAndID(t *testing.T) {
-	options := tokens.AuthOptions{UserID: "myself", Password: "swordfish"}
+	options := gophercloud.AuthOptionsV3{UserID: "myself", Password: "swordfish"}
 	scope := &tokens.Scope{ProjectName: "whoops", ProjectID: "toomuch", DomainID: "1234"}
 	authTokenPostErr(t, options, scope, false, gophercloud.ErrScopeProjectIDOrProjectName{})
 }
 
 func TestCreateFailureScopeProjectIDAndDomainID(t *testing.T) {
-	options := tokens.AuthOptions{UserID: "myself", Password: "swordfish"}
+	options := gophercloud.AuthOptionsV3{UserID: "myself", Password: "swordfish"}
 	scope := &tokens.Scope{ProjectID: "toomuch", DomainID: "notneeded"}
 	authTokenPostErr(t, options, scope, false, gophercloud.ErrScopeProjectIDAlone{})
 }
 
 func TestCreateFailureScopeProjectIDAndDomainNAme(t *testing.T) {
-	options := tokens.AuthOptions{UserID: "myself", Password: "swordfish"}
+	options := gophercloud.AuthOptionsV3{UserID: "myself", Password: "swordfish"}
 	scope := &tokens.Scope{ProjectID: "toomuch", DomainName: "notneeded"}
 	authTokenPostErr(t, options, scope, false, gophercloud.ErrScopeProjectIDAlone{})
 }
 
 func TestCreateFailureScopeDomainIDAndDomainName(t *testing.T) {
-	options := tokens.AuthOptions{UserID: "myself", Password: "swordfish"}
+	options := gophercloud.AuthOptionsV3{UserID: "myself", Password: "swordfish"}
 	scope := &tokens.Scope{DomainID: "toomuch", DomainName: "notneeded"}
 	authTokenPostErr(t, options, scope, false, gophercloud.ErrScopeDomainIDOrDomainName{})
 }
 
 /*
 func TestCreateFailureEmptyScope(t *testing.T) {
-	options := tokens.AuthOptions{UserID: "myself", Password: "swordfish"}
+	options := gophercloud.AuthOptionsV3{UserID: "myself", Password: "swordfish"}
 	scope := &tokens.Scope{}
 	authTokenPostErr(t, options, scope, false, gophercloud.ErrScopeEmpty{})
 }
@@ -782,7 +782,7 @@ func TestNoTokenInResponse(t *testing.T) {
 		fmt.Fprintf(w, `{}`)
 	})
 
-	options := tokens.AuthOptions{UserID: "me", Password: "squirrel!"}
+	options := gophercloud.AuthOptionsV3{UserID: "me", Password: "squirrel!"}
 	_, err := tokens.Create(context.TODO(), &client, &options).Extract()
 	testhelper.AssertNoErr(t, err)
 }

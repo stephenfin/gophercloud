@@ -8,8 +8,8 @@ import (
 
 	"github.com/gophercloud/gophercloud/v2"
 	tokens2 "github.com/gophercloud/gophercloud/v2/openstack/identity/v2/tokens"
-	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/ec2tokens"
-	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/oauth1"
+	//"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/ec2tokens"
+	//"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/oauth1"
 	tokens3 "github.com/gophercloud/gophercloud/v2/openstack/identity/v3/tokens"
 	"github.com/gophercloud/gophercloud/v2/openstack/utils"
 )
@@ -72,7 +72,7 @@ func NewClient(endpoint string) (*gophercloud.ProviderClient, error) {
 //		Region: os.Getenv("OS_REGION_NAME"),
 //	})
 func AuthenticatedClient(ctx context.Context, options gophercloud.AuthOptions) (*gophercloud.ProviderClient, error) {
-	client, err := NewClient(options.IdentityEndpoint)
+	client, err := NewClient(options.GetIdentityEndpoint())
 	if err != nil {
 		return nil, err
 	}
@@ -99,9 +99,17 @@ func Authenticate(ctx context.Context, client *gophercloud.ProviderClient, optio
 
 	switch chosen.ID {
 	case v2:
-		return v2auth(ctx, client, endpoint, options, gophercloud.EndpointOpts{})
+		v2Options, ok := options.(gophercloud.AuthOptionsV2)
+		if !ok {
+			// TODO: error
+		}
+		return v2auth(ctx, client, endpoint, v2Options, gophercloud.EndpointOpts{})
 	case v3:
-		return v3auth(ctx, client, endpoint, &options, gophercloud.EndpointOpts{})
+		v3Options, ok := options.(gophercloud.AuthOptionsV3)
+		if !ok {
+			// TODO: error
+		}
+		return v3auth(ctx, client, endpoint, v3Options, gophercloud.EndpointOpts{})
 	default:
 		// The switch statement must be out of date from the versions list.
 		return fmt.Errorf("Unrecognized identity version: %s", chosen.ID)
@@ -109,11 +117,11 @@ func Authenticate(ctx context.Context, client *gophercloud.ProviderClient, optio
 }
 
 // AuthenticateV2 explicitly authenticates against the identity v2 endpoint.
-func AuthenticateV2(ctx context.Context, client *gophercloud.ProviderClient, options gophercloud.AuthOptions, eo gophercloud.EndpointOpts) error {
+func AuthenticateV2(ctx context.Context, client *gophercloud.ProviderClient, options gophercloud.AuthOptionsV2, eo gophercloud.EndpointOpts) error {
 	return v2auth(ctx, client, "", options, eo)
 }
 
-func v2auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint string, options gophercloud.AuthOptions, eo gophercloud.EndpointOpts) error {
+func v2auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint string, options gophercloud.AuthOptionsV2, eo gophercloud.EndpointOpts) error {
 	v2Client, err := NewIdentityV2(client, eo)
 	if err != nil {
 		return err
@@ -123,14 +131,20 @@ func v2auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint st
 		v2Client.Endpoint = endpoint
 	}
 
-	v2Opts := tokens2.AuthOptions{
-		IdentityEndpoint: options.IdentityEndpoint,
-		Username:         options.Username,
-		Password:         options.Password,
-		TenantID:         options.TenantID,
-		TenantName:       options.TenantName,
-		AllowReauth:      options.AllowReauth,
-		TokenID:          options.TokenID,
+	v2Opts := tokens2.CreateOpts{
+		TenantID:   options.TenantID,
+		TenantName: options.TenantName,
+	}
+
+	if options.TokenID != "" {
+		v2Opts.PasswordCredentials = &tokens2.PasswordCredentials{
+			Username: options.Username,
+			Password: options.Password,
+		}
+	} else { // password auth
+		v2Opts.TokenCredentials = &tokens2.TokenCredentials{
+			ID: options.TokenID,
+		}
 	}
 
 	result := tokens2.Create(ctx, v2Client, v2Opts)
@@ -175,11 +189,11 @@ func v2auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint st
 }
 
 // AuthenticateV3 explicitly authenticates against the identity v3 service.
-func AuthenticateV3(ctx context.Context, client *gophercloud.ProviderClient, options tokens3.AuthOptionsBuilder, eo gophercloud.EndpointOpts) error {
+func AuthenticateV3(ctx context.Context, client *gophercloud.ProviderClient, options gophercloud.AuthOptionsV3, eo gophercloud.EndpointOpts) error {
 	return v3auth(ctx, client, "", options, eo)
 }
 
-func v3auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint string, opts tokens3.AuthOptionsBuilder, eo gophercloud.EndpointOpts) error {
+func v3auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint string, opts gophercloud.AuthOptionsV3, eo gophercloud.EndpointOpts) error {
 	// Override the generated service endpoint with the one returned by the version endpoint.
 	v3Client, err := NewIdentityV3(client, eo)
 	if err != nil {
@@ -192,29 +206,18 @@ func v3auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint st
 
 	var catalog *tokens3.ServiceCatalog
 
-	var tokenID string
-	// passthroughToken allows to passthrough the token without a scope
-	var passthroughToken bool
-	switch v := opts.(type) {
-	case *gophercloud.AuthOptions:
-		tokenID = v.TokenID
-		passthroughToken = (v.Scope == nil || *v.Scope == gophercloud.AuthScope{})
-	case *tokens3.AuthOptions:
-		tokenID = v.TokenID
-		passthroughToken = (v.Scope == tokens3.Scope{})
-	}
-
-	if tokenID != "" && passthroughToken {
+	// Treat tokens specially
+	if opts.TokenID != "" && !opts.IsScoped() {
 		// passing through the token ID without requesting a new scope
-		if opts.CanReauth() {
+		if opts.AllowReauth {
 			return fmt.Errorf("cannot use AllowReauth, when the token ID is defined and auth scope is not set")
 		}
 
-		v3Client.SetToken(tokenID)
-		result := tokens3.Get(ctx, v3Client, tokenID)
-		if result.Err != nil {
-			return result.Err
-		}
+		v3Client.SetToken(opts.TokenID)
+		result := tokens3.Get(ctx, v3Client, opts.TokenID)
+		//if result.Err != nil {
+		//	return result.Err
+		//}
 
 		err = client.SetTokenAndAuthResult(result)
 		if err != nil {
@@ -225,29 +228,30 @@ func v3auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint st
 		if err != nil {
 			return err
 		}
-	} else {
-		var result tokens3.CreateResult
-		switch opts.(type) {
-		case *ec2tokens.AuthOptions:
-			result = ec2tokens.Create(ctx, v3Client, opts)
-		case *oauth1.AuthOptions:
-			result = oauth1.Create(ctx, v3Client, opts)
-		default:
-			result = tokens3.Create(ctx, v3Client, opts)
+
+		client.EndpointLocator = func(opts gophercloud.EndpointOpts) (string, error) {
+			return V3EndpointURL(catalog, opts)
 		}
 
-		err = client.SetTokenAndAuthResult(result)
-		if err != nil {
-			return err
-		}
-
-		catalog, err = result.ExtractServiceCatalog()
-		if err != nil {
-			return err
-		}
+		return nil
+	}
+	createOpts, err := tokens3.FromAuthOptions(opts)
+	if err != nil {
+		return err
 	}
 
-	if opts.CanReauth() {
+	result := tokens3.Create(ctx, v3Client, createOpts)
+	err = client.SetTokenAndAuthResult(result)
+	if err != nil {
+		return err
+	}
+
+	catalog, err = result.ExtractServiceCatalog()
+	if err != nil {
+		return err
+	}
+
+	if createOpts.CanReauth() {
 		// here we're creating a throw-away client (tac). it's a copy of the user's provider client, but
 		// with the token and reauth func zeroed out. combined with setting `AllowReauth` to `false`,
 		// this should retry authentication only once
@@ -258,27 +262,8 @@ func v3auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint st
 		if err != nil {
 			return err
 		}
-		var tao tokens3.AuthOptionsBuilder
-		switch ot := opts.(type) {
-		case *gophercloud.AuthOptions:
-			o := *ot
-			o.AllowReauth = false
-			tao = &o
-		case *tokens3.AuthOptions:
-			o := *ot
-			o.AllowReauth = false
-			tao = &o
-		case *ec2tokens.AuthOptions:
-			o := *ot
-			o.AllowReauth = false
-			tao = &o
-		case *oauth1.AuthOptions:
-			o := *ot
-			o.AllowReauth = false
-			tao = &o
-		default:
-			tao = opts
-		}
+		tao := opts
+		tao.AllowReauth = false
 		client.ReauthFunc = func(ctx context.Context) error {
 			err := v3auth(ctx, &tac, endpoint, tao, eo)
 			if err != nil {

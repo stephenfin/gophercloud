@@ -37,7 +37,3 @@ func userAccessTokenRolesURL(c *gophercloud.ServiceClient, userID string, id str
 func userAccessTokenRoleURL(c *gophercloud.ServiceClient, userID string, id string, roleID string) string {
 	return c.ServiceURL("users", userID, "OS-OAUTH1", "access_tokens", id, "roles", roleID)
 }
-
-func authURL(c *gophercloud.ServiceClient) string {
-	return c.ServiceURL("auth", "tokens")
-}

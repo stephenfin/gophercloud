@@ -2,8 +2,6 @@ package clouds
 
 import (
 	"io"
-
-	"github.com/gophercloud/gophercloud/v2"
 )
 
 type cloudOpts struct {
@@ -19,13 +17,19 @@ type cloudOpts struct {
 	domainID                    string
 	domainName                  string
 	endpointType                string
+	identityAPIVersion          string
 	password                    string
+	projectDomainID             string
+	projectDomainName           string
 	projectID                   string
 	projectName                 string
 	region                      string
-	scope                       *gophercloud.AuthScope
+	systemScope                 string
 	token                       string
+	trustID                     string
 	userID                      string
+	userDomainID                string
+	userDomainName              string
 	username                    string
 
 	caCertPath     string
@@ -122,6 +126,18 @@ func WithPassword(password string) ParseOption {
 	}
 }
 
+func WithProjectDomainID(projectDomainID string) ParseOption {
+	return func(co *cloudOpts) {
+		co.projectDomainID = projectDomainID
+	}
+}
+
+func WithProjectDomainName(projectDomainName string) ParseOption {
+	return func(co *cloudOpts) {
+		co.projectDomainName = projectDomainName
+	}
+}
+
 func WithProjectID(projectID string) ParseOption {
 	return func(co *cloudOpts) {
 		co.projectID = projectID
@@ -142,15 +158,27 @@ func WithRegion(region string) ParseOption {
 	}
 }
 
-func WithScope(scope *gophercloud.AuthScope) ParseOption {
+func WithSystemScope(systemScope string) ParseOption {
 	return func(co *cloudOpts) {
-		co.scope = scope
+		co.systemScope = systemScope
 	}
 }
 
 func WithToken(token string) ParseOption {
 	return func(co *cloudOpts) {
 		co.token = token
+	}
+}
+
+func WithUserDomainID(userDomainID string) ParseOption {
+	return func(co *cloudOpts) {
+		co.userDomainID = userDomainID
+	}
+}
+
+func WithUserDomainName(userDomainName string) ParseOption {
+	return func(co *cloudOpts) {
+		co.userDomainName = userDomainName
 	}
 }
 

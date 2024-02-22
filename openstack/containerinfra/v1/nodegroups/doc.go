@@ -4,25 +4,6 @@ Package nodegroups provides methods for interacting with the Magnum node group A
 All node group actions must be performed on a specific cluster,
 so the cluster UUID/name is required as a parameter in each method.
 
-Create a client to use:
-
-	opts, err := openstack.AuthOptionsFromEnv()
-	if err != nil {
-	    panic(err)
-	}
-
-	provider, err := openstack.AuthenticatedClient(context.TODO(), opts)
-	if err != nil {
-	    panic(err)
-	}
-
-	client, err := openstack.NewContainerInfraV1(provider, gophercloud.EndpointOpts{Region: os.Getenv("OS_REGION_NAME")})
-	if err != nil {
-	    panic(err)
-	}
-
-	client.Microversion = "1.9"
-
 Example of Getting a node group:
 
 	ng, err := nodegroups.Get(context.TODO(), client, clusterUUID, nodeGroupUUID).Extract()

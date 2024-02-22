@@ -15,15 +15,13 @@ func TestToTokenV3ScopeMap(t *testing.T) {
 	domainName := "Default"
 
 	var successCases = []struct {
-		opts     gophercloud.AuthOptions
+		opts     gophercloud.AuthOptionsV3
 		expected map[string]any
 	}{
 		// System-scoped
 		{
-			gophercloud.AuthOptions{
-				Scope: &gophercloud.AuthScope{
-					System: true,
-				},
+			gophercloud.AuthOptionsV3{
+				SystemScope: "all",
 			},
 			map[string]any{
 				"system": map[string]any{
@@ -33,10 +31,8 @@ func TestToTokenV3ScopeMap(t *testing.T) {
 		},
 		// Trust-scoped
 		{
-			gophercloud.AuthOptions{
-				Scope: &gophercloud.AuthScope{
-					TrustID: "05144328-1f7d-46a9-a978-17eaad187077",
-				},
+			gophercloud.AuthOptionsV3{
+				TrustID: "05144328-1f7d-46a9-a978-17eaad187077",
 			},
 			map[string]any{
 				"OS-TRUST:trust": map[string]string{
@@ -46,10 +42,8 @@ func TestToTokenV3ScopeMap(t *testing.T) {
 		},
 		// Project-scoped (ID)
 		{
-			gophercloud.AuthOptions{
-				Scope: &gophercloud.AuthScope{
-					ProjectID: projectID,
-				},
+			gophercloud.AuthOptionsV3{
+				ProjectID: projectID,
 			},
 			map[string]any{
 				"project": map[string]any{
@@ -59,11 +53,9 @@ func TestToTokenV3ScopeMap(t *testing.T) {
 		},
 		// Project-scoped (name)
 		{
-			gophercloud.AuthOptions{
-				Scope: &gophercloud.AuthScope{
-					ProjectName: projectName,
-					DomainName:  domainName,
-				},
+			gophercloud.AuthOptionsV3{
+				ProjectName: projectName,
+				DomainName:  domainName,
 			},
 			map[string]any{
 				"project": map[string]any{
@@ -76,10 +68,8 @@ func TestToTokenV3ScopeMap(t *testing.T) {
 		},
 		// Domain-scoped (ID)
 		{
-			gophercloud.AuthOptions{
-				Scope: &gophercloud.AuthScope{
-					DomainID: domainID,
-				},
+			gophercloud.AuthOptionsV3{
+				DomainID: domainID,
 			},
 			map[string]any{
 				"domain": map[string]any{
@@ -89,10 +79,8 @@ func TestToTokenV3ScopeMap(t *testing.T) {
 		},
 		// Domain-scoped (name)
 		{
-			gophercloud.AuthOptions{
-				Scope: &gophercloud.AuthScope{
-					DomainName: domainName,
-				},
+			gophercloud.AuthOptionsV3{
+				DomainName: domainName,
 			},
 			map[string]any{
 				"domain": map[string]any{
@@ -102,9 +90,9 @@ func TestToTokenV3ScopeMap(t *testing.T) {
 		},
 		// Empty with project fallback (ID)
 		{
-			gophercloud.AuthOptions{
-				TenantID: projectID,
-				Scope:    nil,
+			gophercloud.AuthOptionsV3{
+				ProjectID: projectID,
+				SystemScope: "",
 			},
 			map[string]any{
 				"project": map[string]any{
@@ -114,10 +102,10 @@ func TestToTokenV3ScopeMap(t *testing.T) {
 		},
 		// Empty with project fallback (name)
 		{
-			gophercloud.AuthOptions{
-				TenantName: projectName,
+			gophercloud.AuthOptionsV3{
+				ProjectName: projectName,
 				DomainName: domainName,
-				Scope:      nil,
+				SystemScope: "",
 			},
 			map[string]any{
 				"project": map[string]any{
@@ -130,8 +118,8 @@ func TestToTokenV3ScopeMap(t *testing.T) {
 		},
 		// Empty without fallback
 		{
-			gophercloud.AuthOptions{
-				Scope: nil,
+			gophercloud.AuthOptionsV3{
+				SystemScope: "",
 			},
 			nil,
 		},
@@ -143,56 +131,46 @@ func TestToTokenV3ScopeMap(t *testing.T) {
 	}
 
 	var failCases = []struct {
-		opts     gophercloud.AuthOptions
+		opts     gophercloud.AuthOptionsV3
 		expected error
 	}{
 		// Project-scoped with name but missing domain ID/name
 		{
-			gophercloud.AuthOptions{
-				Scope: &gophercloud.AuthScope{
-					ProjectName: "admin",
-				},
+			gophercloud.AuthOptionsV3{
+				ProjectName: "admin",
 			},
 			gophercloud.ErrScopeDomainIDOrDomainName{},
 		},
 		// Project-scoped with both project name and project ID
 		{
-			gophercloud.AuthOptions{
-				Scope: &gophercloud.AuthScope{
-					ProjectName: "admin",
-					ProjectID:   "685038cd-3c25-4faf-8f9b-78c18e503190",
-					DomainName:  "Default",
-				},
+			gophercloud.AuthOptionsV3{
+				ProjectName: "admin",
+				ProjectID:   "685038cd-3c25-4faf-8f9b-78c18e503190",
+				DomainName:  "Default",
 			},
 			gophercloud.ErrScopeProjectIDOrProjectName{},
 		},
 		// Project-scoped with name and unnecessary domain ID
 		{
-			gophercloud.AuthOptions{
-				Scope: &gophercloud.AuthScope{
-					ProjectID: "685038cd-3c25-4faf-8f9b-78c18e503190",
-					DomainID:  "e4b515b8-e453-49d8-9cce-4bec244fa84e",
-				},
+			gophercloud.AuthOptionsV3{
+				ProjectID: "685038cd-3c25-4faf-8f9b-78c18e503190",
+				DomainID:  "e4b515b8-e453-49d8-9cce-4bec244fa84e",
 			},
 			gophercloud.ErrScopeProjectIDAlone{},
 		},
 		// Project-scoped with name and unnecessary domain name
 		{
-			gophercloud.AuthOptions{
-				Scope: &gophercloud.AuthScope{
-					ProjectID:  "685038cd-3c25-4faf-8f9b-78c18e503190",
-					DomainName: "Default",
-				},
+			gophercloud.AuthOptionsV3{
+				ProjectID:  "685038cd-3c25-4faf-8f9b-78c18e503190",
+				DomainName: "Default",
 			},
 			gophercloud.ErrScopeProjectIDAlone{},
 		},
 		// Domain-scoped with both domain name and domain ID
 		{
-			gophercloud.AuthOptions{
-				Scope: &gophercloud.AuthScope{
-					DomainID:   "e4b515b8-e453-49d8-9cce-4bec244fa84e",
-					DomainName: "Default",
-				},
+			gophercloud.AuthOptionsV3{
+				DomainID:   "e4b515b8-e453-49d8-9cce-4bec244fa84e",
+				DomainName: "Default",
 			},
 			gophercloud.ErrScopeDomainIDOrDomainName{},
 		},

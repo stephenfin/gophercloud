@@ -17,15 +17,25 @@ type EndpointOpts struct {
 
 // NewClient prepares an unauthenticated ProviderClient instance.
 func NewClient(options gophercloud.AuthOptions) (*gophercloud.ProviderClient, error) {
-	if options.Username == "" {
-		options.Username = "admin"
-	}
-	if options.TenantName == "" {
-		options.TenantName = "admin"
+	var username, projectName string
+
+	switch v := options.(type) {
+	case gophercloud.AuthOptionsV2:
+	case gophercloud.AuthOptionsV3:
+		username = v.Username
+		projectName = v.ProjectName
+		if username == "" {
+			username = "admin"
+		}
+		if projectName == "" {
+			projectName = "admin"
+		}
+	default:
+		return nil, fmt.Errorf("Unsupported AuthOptions type")
 	}
 
 	client := &gophercloud.ProviderClient{
-		TokenID: fmt.Sprintf("%s:%s", options.Username, options.TenantName),
+		TokenID: fmt.Sprintf("%s:%s", username, projectName),
 	}
 
 	return client, nil

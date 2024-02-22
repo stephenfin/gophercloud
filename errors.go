@@ -265,18 +265,36 @@ func (e ErrUserIDWithToken) Error() string {
 	return redundantWithTokenErr("UserID")
 }
 
-// ErrDomainIDWithToken indicates that a DomainID was provided, but token authentication is being used instead.
+// ErrDomainIDWithToken indicates that a DomainID was provided, but
+// token authentication is being used instead.
 type ErrDomainIDWithToken struct{ BaseError }
 
 func (e ErrDomainIDWithToken) Error() string {
 	return redundantWithTokenErr("DomainID")
 }
 
-// ErrDomainNameWithToken indicates that a DomainName was provided, but token authentication is being used instead.s
+// ErrDomainNameWithToken indicates that a DomainName was provided, but
+// token authentication is being used instead.
 type ErrDomainNameWithToken struct{ BaseError }
 
 func (e ErrDomainNameWithToken) Error() string {
 	return redundantWithTokenErr("DomainName")
+}
+
+// ErrUserDomainIDWithToken indicates that a UserDomainID was provided, but
+// token authentication is being used instead.
+type ErrUserDomainIDWithToken struct{ BaseError }
+
+func (e ErrUserDomainIDWithToken) Error() string {
+	return redundantWithTokenErr("UserDomainID")
+}
+
+// ErrUserDomainNameWithToken indicates that a UserDomainName was provided, but
+// token authentication is being used instead.
+type ErrUserDomainNameWithToken struct{ BaseError }
+
+func (e ErrUserDomainNameWithToken) Error() string {
+	return redundantWithTokenErr("UserDomainName")
 }
 
 // ErrUsernameOrUserID indicates that neither username nor userID are specified, or both are at once.
@@ -348,4 +366,10 @@ type ErrAppCredMissingSecret struct{ BaseError }
 
 func (e ErrAppCredMissingSecret) Error() string {
 	return "You must provide an Application Credential Secret"
+}
+
+type ErrAppCredIDOrAppCredName struct{ BaseError }
+
+func (e ErrAppCredIDOrAppCredName) Error() string {
+	return "Your must provide an Appliction Credential ID or Name"
 }

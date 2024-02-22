@@ -271,7 +271,7 @@ var ExpectedServiceCatalog = tokens.ServiceCatalog{
 	Entries: []tokens.CatalogEntry{catalogEntry1, catalogEntry2},
 }
 
-var domain = tokens.Domain{
+var domain = tokens.ScopeDomain{
 	ID:   "default",
 	Name: "Default",
 }
@@ -292,14 +292,14 @@ var role = tokens.Role{
 var ExpectedRoles = []tokens.Role{role}
 
 // ExpectedProject contains expected project extracted from token response.
-var ExpectedProject = tokens.Project{
+var ExpectedProject = tokens.ScopeProject{
 	Domain: domain,
 	ID:     "a99e9b4e620e4db09a2dfb6e42a01e66",
 	Name:   "admin",
 }
 
 // ExpectedDomain contains expected domain extracted from token response.
-var ExpectedDomain = tokens.Domain{
+var ExpectedDomain = tokens.ScopeDomain{
 	ID:   "default",
 	Name: "Default",
 }
