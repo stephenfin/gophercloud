@@ -116,39 +116,6 @@ type AuthScope struct {
 	TrustID     string
 }
 
-// ToTokenV2CreateMap allows AuthOptions to satisfy the AuthOptionsBuilder
-// interface in the v2 tokens package
-func (opts AuthOptions) ToTokenV2CreateMap() (map[string]any, error) {
-	// Populate the request map.
-	authMap := make(map[string]any)
-
-	if opts.Username != "" {
-		if opts.Password != "" {
-			authMap["passwordCredentials"] = map[string]any{
-				"username": opts.Username,
-				"password": opts.Password,
-			}
-		} else {
-			return nil, ErrMissingInput{Argument: "Password"}
-		}
-	} else if opts.TokenID != "" {
-		authMap["token"] = map[string]any{
-			"id": opts.TokenID,
-		}
-	} else {
-		return nil, ErrMissingInput{Argument: "Username"}
-	}
-
-	if opts.TenantID != "" {
-		authMap["tenantId"] = opts.TenantID
-	}
-	if opts.TenantName != "" {
-		authMap["tenantName"] = opts.TenantName
-	}
-
-	return map[string]any{"auth": authMap}, nil
-}
-
 // ToTokenCreateMap allows AuthOptions to satisfy the AuthOptionsBuilder
 // interface
 func (opts *AuthOptions) ToTokenCreateMap(scope map[string]any) (map[string]any, error) {

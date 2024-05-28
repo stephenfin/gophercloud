@@ -23,7 +23,10 @@ func TestTokenAuthenticate(t *testing.T) {
 	authOptions, err := openstack.AuthOptionsFromEnv()
 	th.AssertNoErr(t, err)
 
-	result := tokens.Create(context.TODO(), client, authOptions)
+	createOpts, err := tokens.FromAuthOptions(authOptions)
+	th.AssertNoErr(t, err)
+
+	result := tokens.Create(context.TODO(), client, createOpts)
 	token, err := result.ExtractToken()
 	th.AssertNoErr(t, err)
 
@@ -47,7 +50,10 @@ func TestTokenValidate(t *testing.T) {
 	authOptions, err := openstack.AuthOptionsFromEnv()
 	th.AssertNoErr(t, err)
 
-	result := tokens.Create(context.TODO(), client, authOptions)
+	createOpts, err := tokens.FromAuthOptions(authOptions)
+	th.AssertNoErr(t, err)
+
+	result := tokens.Create(context.TODO(), client, createOpts)
 	token, err := result.ExtractToken()
 	th.AssertNoErr(t, err)
 

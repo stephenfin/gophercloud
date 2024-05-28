@@ -6,24 +6,23 @@ import (
 	"github.com/gophercloud/gophercloud/v2"
 )
 
-// PasswordCredentialsV2 represents the required options to authenticate
+// PasswordCredentials represents the required options to authenticate
 // with a username and password.
-type PasswordCredentialsV2 struct {
+type PasswordCredentials struct {
 	Username string `json:"username" required:"true"`
 	Password string `json:"password" required:"true"`
 }
 
-// TokenCredentialsV2 represents the required options to authenticate
+// TokenCredentials represents the required options to authenticate
 // with a token.
-type TokenCredentialsV2 struct {
+type TokenCredentials struct {
 	ID string `json:"id,omitempty" required:"true"`
 }
 
-// AuthOptionsV2 wraps a gophercloud AuthOptions in order to adhere to the
-// AuthOptionsBuilder interface.
-type AuthOptionsV2 struct {
-	PasswordCredentials *PasswordCredentialsV2 `json:"passwordCredentials,omitempty" xor:"TokenCredentials"`
-
+// CreateOpts contains options for creating a Token. This object is passed to
+// the tokens.Create function. For more information about these parameters,
+// see the Token object.
+type CreateOpts struct {
 	// The TenantID and TenantName fields are optional for the Identity V2 API.
 	// Some providers allow you to specify a TenantName instead of the TenantId.
 	// Some require both. Your provider's authentication policies will determine
@@ -31,67 +30,68 @@ type AuthOptionsV2 struct {
 	TenantID   string `json:"tenantId,omitempty"`
 	TenantName string `json:"tenantName,omitempty"`
 
+	// PasswordCredentials allows users to authenticate with a username and
+	// password
+	PasswordCredentials *PasswordCredentials `json:"passwordCredentials,omitempty" xor:"TokenCredentials"`
+
 	// TokenCredentials allows users to authenticate (possibly as another user)
 	// with an authentication token ID.
-	TokenCredentials *TokenCredentialsV2 `json:"token,omitempty" xor:"PasswordCredentials"`
+	TokenCredentials *TokenCredentials `json:"token,omitempty" xor:"PasswordCredentials"`
+
+	// AllowReauth should be set to true if you grant permission for Gophercloud
+	// to cache your credentials in memory, and to allow Gophercloud to attempt
+	// to re-authenticate automatically if/when your token expires.  If you set
+	// it to false, it will not cache these settings, but re-authentication will
+	// not be possible.  This setting defaults to false.
+	AllowReauth bool `json:"-"`
 }
 
-// AuthOptionsBuilder allows extensions to add additional parameters to the
+// CreateOptsBuilder allows extensions to add additional parameters to the
 // token create request.
-type AuthOptionsBuilder interface {
+type CreateOptsBuilder interface {
 	// ToTokenCreateMap assembles the Create request body, returning an error
 	// if parameters are missing or inconsistent.
-	ToTokenV2CreateMap() (map[string]any, error)
-	CanReauth() bool
+	ToTokenCreateMap() (map[string]any, error)
 }
 
-// AuthOptions are the valid options for Openstack Identity v2 authentication.
-// For field descriptions, see gophercloud.AuthOptions.
-type AuthOptions struct {
-	IdentityEndpoint string `json:"-"`
-	Username         string `json:"username,omitempty"`
-	Password         string `json:"password,omitempty"`
-	TenantID         string `json:"tenantId,omitempty"`
-	TenantName       string `json:"tenantName,omitempty"`
-	AllowReauth      bool   `json:"-"`
-	TokenID          string
-}
-
-// ToTokenV2CreateMap builds a token request body from the given AuthOptions.
-func (opts AuthOptions) ToTokenV2CreateMap() (map[string]any, error) {
-	v2Opts := AuthOptionsV2{
-		TenantID:   opts.TenantID,
-		TenantName: opts.TenantName,
-	}
-
-	if opts.Password != "" {
-		v2Opts.PasswordCredentials = &PasswordCredentialsV2{
-			Username: opts.Username,
-			Password: opts.Password,
-		}
-	} else {
-		v2Opts.TokenCredentials = &TokenCredentialsV2{
-			ID: opts.TokenID,
-		}
-	}
-
-	b, err := gophercloud.BuildRequestBody(v2Opts, "auth")
+// ToTokenCreateMap builds a token request body from the given AuthOptions.
+func (opts CreateOpts) ToTokenCreateMap() (map[string]any, error) {
+	b, err := gophercloud.BuildRequestBody(opts, "auth")
 	if err != nil {
 		return nil, err
 	}
 	return b, nil
 }
 
-func (opts AuthOptions) CanReauth() bool {
-	return opts.AllowReauth
+// FromAuthOptions converts an AuthOptions object to a CreateOpts object
+func FromAuthOptions(opts gophercloud.AuthOptions) (*CreateOpts, error) {
+	createOpts := &CreateOpts{
+		TenantID:   opts.TenantID,
+		TenantName: opts.TenantName,
+	}
+
+	if opts.Password != "" {
+		createOpts.PasswordCredentials = &PasswordCredentials{
+			Username: opts.Username,
+			Password: opts.Password,
+		}
+	} else {
+		createOpts.TokenCredentials = &TokenCredentials{
+			ID: opts.TokenID,
+		}
+	}
+
+	createOpts.AllowReauth = opts.AllowReauth
+
+	return createOpts, nil
 }
 
 // Create authenticates to the identity service and attempts to acquire a Token.
 // Generally, rather than interact with this call directly, end users should
 // call openstack.AuthenticatedClient(), which abstracts all of the gory details
 // about navigating service catalogs and such.
-func Create(ctx context.Context, client *gophercloud.ServiceClient, auth AuthOptionsBuilder) (r CreateResult) {
-	b, err := auth.ToTokenV2CreateMap()
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+	b, err := opts.ToTokenCreateMap()
 	if err != nil {
 		r.Err = err
 		return
@@ -105,8 +105,8 @@ func Create(ctx context.Context, client *gophercloud.ServiceClient, auth AuthOpt
 }
 
 // Get validates and retrieves information for user's token.
-func Get(ctx context.Context, client *gophercloud.ServiceClient, token string) (r GetResult) {
-	resp, err := client.Get(ctx, GetURL(client, token), &r.Body, &gophercloud.RequestOpts{
+func Get(ctx context.Context, client *gophercloud.ServiceClient, id string) (r GetResult) {
+	resp, err := client.Get(ctx, GetURL(client, id), &r.Body, &gophercloud.RequestOpts{
 		OkCodes: []int{200, 203},
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)

@@ -99,7 +99,7 @@ func Authenticate(ctx context.Context, client *gophercloud.ProviderClient, optio
 
 	switch chosen.ID {
 	case v2:
-		return v2auth(ctx, client, endpoint, &options, gophercloud.EndpointOpts{})
+		return v2auth(ctx, client, endpoint, options, gophercloud.EndpointOpts{})
 	case v3:
 		return v3auth(ctx, client, endpoint, &options, gophercloud.EndpointOpts{})
 	default:
@@ -109,17 +109,11 @@ func Authenticate(ctx context.Context, client *gophercloud.ProviderClient, optio
 }
 
 // AuthenticateV2 explicitly authenticates against the identity v2 endpoint.
-func AuthenticateV2(ctx context.Context, client *gophercloud.ProviderClient, options tokens2.AuthOptionsBuilder, eo gophercloud.EndpointOpts) error {
+func AuthenticateV2(ctx context.Context, client *gophercloud.ProviderClient, options gophercloud.AuthOptions, eo gophercloud.EndpointOpts) error {
 	return v2auth(ctx, client, "", options, eo)
 }
 
-type v2TokenNoReauth struct {
-	tokens2.AuthOptionsBuilder
-}
-
-func (v2TokenNoReauth) CanReauth() bool { return false }
-
-func v2auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint string, options tokens2.AuthOptionsBuilder, eo gophercloud.EndpointOpts) error {
+func v2auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint string, options gophercloud.AuthOptions, eo gophercloud.EndpointOpts) error {
 	v2Client, err := NewIdentityV2(client, eo)
 	if err != nil {
 		return err
@@ -129,7 +123,11 @@ func v2auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint st
 		v2Client.Endpoint = endpoint
 	}
 
-	result := tokens2.Create(ctx, v2Client, options)
+	createOpts, err := tokens2.FromAuthOptions(options)
+	if err != nil {
+		return err
+	}
+	result := tokens2.Create(ctx, v2Client, createOpts)
 
 	err = client.SetTokenAndAuthResult(result)
 	if err != nil {
@@ -153,7 +151,7 @@ func v2auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint st
 			return err
 		}
 		client.ReauthFunc = func(ctx context.Context) error {
-			err := v2auth(ctx, &tac, endpoint, &v2TokenNoReauth{options}, eo)
+			err := v2auth(ctx, &tac, endpoint, options, eo)
 			if err != nil {
 				return err
 			}
