@@ -99,8 +99,9 @@ func TestEC2AuthMethod(t *testing.T) {
 
 	ec2AuthOptions := &ec2tokens.AuthOptions{
 		Access: "181920",
-		Secret: "secretKey",
 	}
+	err = ec2AuthOptions.Sign("secretKey", "", "", nil)
+	th.AssertNoErr(t, err)
 
 	err = openstack.AuthenticateV3(context.TODO(), newClient.ProviderClient, ec2AuthOptions, gophercloud.EndpointOpts{})
 	th.AssertNoErr(t, err)

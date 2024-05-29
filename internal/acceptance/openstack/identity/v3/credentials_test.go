@@ -146,10 +146,10 @@ func TestCredentialsValidateS3(t *testing.T) {
 
 	opts := ec2tokens.AuthOptions{
 		Access: "181920",
-		Secret: "secretKey",
-		// auth will fail if this is not s3
-		Service: "s3",
 	}
+	// auth will fail if service is not s3
+	err = opts.Sign("secretKey", "", "s3", nil)
+	th.AssertNoErr(t, err)
 
 	// Validate a credential
 	token, err = ec2tokens.ValidateS3Token(context.TODO(), client, &opts).Extract()

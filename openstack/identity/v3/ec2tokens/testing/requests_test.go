@@ -49,7 +49,6 @@ func TestCreateV2(t *testing.T) {
 		Access: "a7f1e798b7c2417cba4a02de97dc3cdc",
 		Host:   "localhost",
 		Path:   "/",
-		Secret: "18f4f6761ada4e3795fa5273c30349b9",
 		Verb:   "GET",
 		// this should be removed from JSON request
 		BodyHash: new(string),
@@ -63,8 +62,11 @@ func TestCreateV2(t *testing.T) {
 			"SignatureVersion": "2",
 		},
 	}
+	err := credentials.Sign("18f4f6761ada4e3795fa5273c30349b9", "", "", nil)
+	testhelper.AssertNoErr(t, err)
+
 	authTokenPost(t, credentials, `{
-    "credentials": {
+	"credentials": {
         "access": "a7f1e798b7c2417cba4a02de97dc3cdc",
         "host": "localhost",
         "params": {
@@ -82,14 +84,10 @@ func TestCreateV2(t *testing.T) {
 func TestCreateV4(t *testing.T) {
 	bodyHash := "foo"
 	credentials := ec2tokens.AuthOptions{
-		Access:    "a7f1e798b7c2417cba4a02de97dc3cdc",
-		BodyHash:  &bodyHash,
-		Timestamp: new(time.Time),
-		Region:    "region1",
-		Service:   "ec2",
-		Path:      "/",
-		Secret:    "18f4f6761ada4e3795fa5273c30349b9",
-		Verb:      "GET",
+		Access:   "a7f1e798b7c2417cba4a02de97dc3cdc",
+		BodyHash: &bodyHash,
+		Path:     "/",
+		Verb:     "GET",
 		Headers: map[string]string{
 			"Host": "localhost",
 		},
@@ -97,6 +95,9 @@ func TestCreateV4(t *testing.T) {
 			"Action": "Test",
 		},
 	}
+	err := credentials.Sign("18f4f6761ada4e3795fa5273c30349b9", "region1", "ec2", new(time.Time))
+
+	testhelper.AssertNoErr(t, err)
 	authTokenPost(t, credentials, `{
     "credentials": {
         "access": "a7f1e798b7c2417cba4a02de97dc3cdc",
@@ -119,11 +120,12 @@ func TestCreateV4(t *testing.T) {
 
 func TestCreateV4Empty(t *testing.T) {
 	credentials := ec2tokens.AuthOptions{
-		Access:    "a7f1e798b7c2417cba4a02de97dc3cdc",
-		Secret:    "18f4f6761ada4e3795fa5273c30349b9",
-		BodyHash:  new(string),
-		Timestamp: new(time.Time),
+		Access:   "a7f1e798b7c2417cba4a02de97dc3cdc",
+		BodyHash: new(string),
 	}
+	err := credentials.Sign("18f4f6761ada4e3795fa5273c30349b9", "", "", new(time.Time))
+	testhelper.AssertNoErr(t, err)
+
 	authTokenPost(t, credentials, `{
     "credentials": {
         "access": "a7f1e798b7c2417cba4a02de97dc3cdc",
@@ -143,14 +145,10 @@ func TestCreateV4Empty(t *testing.T) {
 
 func TestCreateV4Headers(t *testing.T) {
 	credentials := ec2tokens.AuthOptions{
-		Access:    "a7f1e798b7c2417cba4a02de97dc3cdc",
-		BodyHash:  new(string),
-		Timestamp: new(time.Time),
-		Region:    "region1",
-		Service:   "ec2",
-		Path:      "/",
-		Secret:    "18f4f6761ada4e3795fa5273c30349b9",
-		Verb:      "GET",
+		Access:   "a7f1e798b7c2417cba4a02de97dc3cdc",
+		BodyHash: new(string),
+		Path:     "/",
+		Verb:     "GET",
 		Headers: map[string]string{
 			"Foo":  "Bar",
 			"Host": "localhost",
@@ -159,6 +157,9 @@ func TestCreateV4Headers(t *testing.T) {
 			"Action": "Test",
 		},
 	}
+	err := credentials.Sign("18f4f6761ada4e3795fa5273c30349b9", "region1", "ec2", new(time.Time))
+	testhelper.AssertNoErr(t, err)
+
 	authTokenPost(t, credentials, `{
     "credentials": {
         "access": "a7f1e798b7c2417cba4a02de97dc3cdc",
@@ -281,7 +282,7 @@ func TestEC2CredentialsBuildSignatureV4(t *testing.T) {
 	expected := "6a5febe41427bf601f0ae7c34dbb0fd67094776138b03fb8e65783d733d302a5"
 
 	date := time.Time{}
-	stringToSign := ec2tokens.EC2CredentialsBuildStringToSignV4(opts, "host", "foo", date)
+	stringToSign := ec2tokens.EC2CredentialsBuildStringToSignV4(opts, "host", "foo", "", "", date)
 	key := ec2tokens.EC2CredentialsBuildSignatureKeyV4("", "", "", date)
 
 	testhelper.CheckEquals(t, expected, ec2tokens.EC2CredentialsBuildSignatureV4(key, stringToSign))

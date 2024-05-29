@@ -7,11 +7,14 @@ https://docs.openstack.org/api-ref/identity/v2-ext/
 
 Example to Create a Token From an EC2 access and secret keys
 
+	access := "a7f1e798b7c2417cba4a02de97dc3cdc"
+	secret := "18f4f6761ada4e3795fa5273c30349b9"
+
 	var authOptions tokens.AuthOptionsBuilder
 	authOptions = &ec2tokens.AuthOptions{
-		Access: "a7f1e798b7c2417cba4a02de97dc3cdc",
-		Secret: "18f4f6761ada4e3795fa5273c30349b9",
+		Access: access,
 	}
+	authOptions.Sign(secret, "", "", nil)
 
 	token, err := ec2tokens.Create(context.TODO(), identityClient, authOptions).ExtractToken()
 	if err != nil {
@@ -25,12 +28,15 @@ Example to auth a client using EC2 access and secret keys
 		panic(err)
 	}
 
+	access := "a7f1e798b7c2417cba4a02de97dc3cdc"
+	secret := "18f4f6761ada4e3795fa5273c30349b9"
+
 	var authOptions tokens.AuthOptionsBuilder
 	authOptions = &ec2tokens.AuthOptions{
-		Access:      "a7f1e798b7c2417cba4a02de97dc3cdc",
-		Secret:      "18f4f6761ada4e3795fa5273c30349b9",
+		Access: access
 		AllowReauth: true,
 	}
+	authOptions.Sign(secret, "", "", nil)
 
 	err = openstack.AuthenticateV3(context.TODO(), client, authOptions, gophercloud.EndpointOpts{})
 	if err != nil {
