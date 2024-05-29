@@ -16,17 +16,6 @@ type Scope struct {
 	TrustID     string
 }
 
-// AuthOptionsBuilder provides the ability for extensions to add additional
-// parameters to AuthOptions. Extensions must satisfy all required methods.
-type AuthOptionsBuilder interface {
-	// ToTokenV3CreateMap assembles the Create request body, returning an error
-	// if parameters are missing or inconsistent.
-	ToTokenV3CreateMap(map[string]any) (map[string]any, error)
-	ToTokenV3HeadersMap(map[string]any) (map[string]string, error)
-	ToTokenV3ScopeMap() (map[string]any, error)
-	CanReauth() bool
-}
-
 // AuthOptions represents options for authenticating a user.
 type AuthOptions struct {
 	// IdentityEndpoint specifies the HTTP endpoint that is required to work with
@@ -113,7 +102,7 @@ func (opts *AuthOptions) CanReauth() bool {
 }
 
 // ToTokenV3HeadersMap allows AuthOptions to satisfy the AuthOptionsBuilder
-// interface in the v3 tokens package.
+// interface
 func (opts *AuthOptions) ToTokenV3HeadersMap(map[string]any) (map[string]string, error) {
 	return nil, nil
 }
@@ -126,7 +115,7 @@ func subjectTokenHeaders(subjectToken string) map[string]string {
 
 // Create authenticates and either generates a new token, or changes the Scope
 // of an existing token.
-func Create(ctx context.Context, c *gophercloud.ServiceClient, opts AuthOptionsBuilder) (r CreateResult) {
+func Create(ctx context.Context, c *gophercloud.ServiceClient, opts gophercloud.AuthOptionsBuilder) (r CreateResult) {
 	scope, err := opts.ToTokenV3ScopeMap()
 	if err != nil {
 		r.Err = err

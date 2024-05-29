@@ -257,19 +257,19 @@ func (opts *AuthOptions) Sign(secret, region, service string, timestamp *time.Ti
 	return nil
 }
 
-// ToTokenV3ScopeMap is a dummy method to satisfy tokens.AuthOptionsBuilder
-// interface.
+// ToTokenV3ScopeMap is a dummy method to satisfy the AuthOptionsBuilder
+// interface
 func (opts *AuthOptions) ToTokenV3ScopeMap() (map[string]any, error) {
 	return nil, nil
 }
 
 // ToTokenV3HeadersMap allows AuthOptions to satisfy the AuthOptionsBuilder
-// interface in the v3 tokens package.
+// interface
 func (opts *AuthOptions) ToTokenV3HeadersMap(map[string]any) (map[string]string, error) {
 	return nil, nil
 }
 
-// CanReauth is a method method to satisfy tokens.AuthOptionsBuilder interface
+// CanReauth is a method method to satisfy the AuthOptionsBuilder interface
 func (opts *AuthOptions) CanReauth() bool {
 	return opts.AllowReauth
 }
@@ -293,7 +293,7 @@ func (opts *AuthOptions) ToTokenV3CreateMap(map[string]any) (map[string]any, err
 }
 
 // Create authenticates and either generates a new token from EC2 credentials
-func Create(ctx context.Context, c *gophercloud.ServiceClient, opts tokens.AuthOptionsBuilder) (r tokens.CreateResult) {
+func Create(ctx context.Context, c *gophercloud.ServiceClient, opts gophercloud.AuthOptionsBuilder) (r tokens.CreateResult) {
 	b, err := opts.ToTokenV3CreateMap(nil)
 	if err != nil {
 		r.Err = err
@@ -313,7 +313,7 @@ func Create(ctx context.Context, c *gophercloud.ServiceClient, opts tokens.AuthO
 
 // ValidateS3Token authenticates an S3 request using EC2 credentials. Doesn't
 // generate a new token ID, but returns a tokens.CreateResult.
-func ValidateS3Token(ctx context.Context, c *gophercloud.ServiceClient, opts tokens.AuthOptionsBuilder) (r tokens.CreateResult) {
+func ValidateS3Token(ctx context.Context, c *gophercloud.ServiceClient, opts gophercloud.AuthOptionsBuilder) (r tokens.CreateResult) {
 	b, err := opts.ToTokenV3CreateMap(nil)
 	if err != nil {
 		r.Err = err

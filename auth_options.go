@@ -1,5 +1,16 @@
 package gophercloud
 
+// AuthOptionsBuilder provides the ability for extensions to add additional
+// parameters to AuthOptions. Extensions must satisfy all required methods.
+type AuthOptionsBuilder interface {
+	// ToTokenV3CreateMap assembles the Create request body, returning an error
+	// if parameters are missing or inconsistent.
+	ToTokenV3CreateMap(map[string]any) (map[string]any, error)
+	ToTokenV3HeadersMap(map[string]any) (map[string]string, error)
+	ToTokenV3ScopeMap() (map[string]any, error)
+	CanReauth() bool
+}
+
 /*
 AuthOptions stores information needed to authenticate to an OpenStack Cloud.
 You can populate one manually, or use a provider's AuthOptionsFromEnv() function

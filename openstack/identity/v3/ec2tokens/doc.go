@@ -10,7 +10,7 @@ Example to Create a Token From an EC2 access and secret keys
 	access := "a7f1e798b7c2417cba4a02de97dc3cdc"
 	secret := "18f4f6761ada4e3795fa5273c30349b9"
 
-	var authOptions tokens.AuthOptionsBuilder
+	var authOptions gophercloud.AuthOptionsBuilder
 	authOptions = &ec2tokens.AuthOptions{
 		Access: access,
 	}
@@ -31,7 +31,7 @@ Example to auth a client using EC2 access and secret keys
 	access := "a7f1e798b7c2417cba4a02de97dc3cdc"
 	secret := "18f4f6761ada4e3795fa5273c30349b9"
 
-	var authOptions tokens.AuthOptionsBuilder
+	var authOptions gophercloud.AuthOptionsBuilder
 	authOptions = &ec2tokens.AuthOptions{
 		Access: access
 		AllowReauth: true,

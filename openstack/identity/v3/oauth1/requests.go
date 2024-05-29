@@ -95,13 +95,13 @@ func (opts AuthOptions) ToTokenV3HeadersMap(headerOpts map[string]any) (map[stri
 	return headers, nil
 }
 
-// ToTokenV3ScopeMap allows AuthOptions to satisfy the tokens.AuthOptionsBuilder
+// ToTokenV3ScopeMap allows AuthOptions to satisfy the AuthOptionsBuilder
 // interface.
 func (opts AuthOptions) ToTokenV3ScopeMap() (map[string]any, error) {
 	return nil, nil
 }
 
-// CanReauth allows AuthOptions to satisfy the tokens.AuthOptionsBuilder
+// CanReauth allows AuthOptions to satisfy the AuthOptionsBuilder
 // interface.
 func (opts AuthOptions) CanReauth() bool {
 	return opts.AllowReauth
@@ -136,7 +136,7 @@ func (opts AuthOptions) ToTokenV3CreateMap(map[string]any) (map[string]any, erro
 
 // Create authenticates and either generates a new OpenStack token
 // from an OAuth1 token.
-func Create(ctx context.Context, client *gophercloud.ServiceClient, opts tokens.AuthOptionsBuilder) (r tokens.CreateResult) {
+func Create(ctx context.Context, client *gophercloud.ServiceClient, opts gophercloud.AuthOptionsBuilder) (r tokens.CreateResult) {
 	b, err := opts.ToTokenV3CreateMap(nil)
 	if err != nil {
 		r.Err = err

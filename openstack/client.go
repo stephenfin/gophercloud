@@ -169,11 +169,11 @@ func v2auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint st
 }
 
 // AuthenticateV3 explicitly authenticates against the identity v3 service.
-func AuthenticateV3(ctx context.Context, client *gophercloud.ProviderClient, options tokens3.AuthOptionsBuilder, eo gophercloud.EndpointOpts) error {
+func AuthenticateV3(ctx context.Context, client *gophercloud.ProviderClient, options gophercloud.AuthOptionsBuilder, eo gophercloud.EndpointOpts) error {
 	return v3auth(ctx, client, "", options, eo)
 }
 
-func v3auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint string, opts tokens3.AuthOptionsBuilder, eo gophercloud.EndpointOpts) error {
+func v3auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint string, opts gophercloud.AuthOptionsBuilder, eo gophercloud.EndpointOpts) error {
 	// Override the generated service endpoint with the one returned by the version endpoint.
 	v3Client, err := NewIdentityV3(client, eo)
 	if err != nil {
@@ -252,7 +252,7 @@ func v3auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint st
 		if err != nil {
 			return err
 		}
-		var tao tokens3.AuthOptionsBuilder
+		var tao gophercloud.AuthOptionsBuilder
 		switch ot := opts.(type) {
 		case *gophercloud.AuthOptions:
 			o := *ot
