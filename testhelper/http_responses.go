@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -94,6 +95,19 @@ func TestHeader(t *testing.T, r *http.Request, header string, expected string) {
 	}
 	for _, actual := range r.Header.Values(header) {
 		if expected != actual {
+			t.Errorf("Header %s = %q, expected %q", header, actual, expected)
+		}
+	}
+}
+
+// TestHeader checks that the header on the http.Request matches the expected pattern.
+func TestHeaderRegex(t *testing.T, r *http.Request, header string, expected string) {
+	if len(r.Header.Values(header)) == 0 {
+		t.Errorf("Header %s not found, expected %q", header, expected)
+		return
+	}
+	for _, actual := range r.Header.Values(header) {
+		if found, _ := regexp.MatchString(expected, actual); !found {
 			t.Errorf("Header %s = %q, expected %q", header, actual, expected)
 		}
 	}

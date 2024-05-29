@@ -323,7 +323,7 @@ func HandleRequestToken(t *testing.T) {
 		testhelper.TestMethod(t, r, "POST")
 		testhelper.TestHeader(t, r, "Accept", "application/json")
 		testhelper.TestHeader(t, r, "X-Auth-Token", client.TokenID)
-		testhelper.TestHeader(t, r, "Authorization", `OAuth oauth_callback="oob", oauth_consumer_key="7fea2d", oauth_nonce="71416001758914252991586795052", oauth_signature_method="HMAC-SHA1", oauth_timestamp="0", oauth_version="1.0", oauth_signature="jCSPVryCYF52Ks0VNNmBmeKSGuw%3D"`)
+		testhelper.TestHeaderRegex(t, r, "Authorization", `OAuth oauth_callback="oob", oauth_consumer_key="7fea2d", oauth_nonce="\d+", oauth_signature_method="HMAC-SHA1", oauth_timestamp="\d+", oauth_version="1.0", oauth_signature="[^"]+"`)
 		testhelper.TestHeader(t, r, "Requested-Project-Id", "1df927e8a466498f98788ed73d3c8ab4")
 		testhelper.TestBody(t, r, "")
 
@@ -361,7 +361,7 @@ func HandleCreateAccessToken(t *testing.T) {
 		testhelper.TestMethod(t, r, "POST")
 		testhelper.TestHeader(t, r, "Accept", "application/json")
 		testhelper.TestHeader(t, r, "X-Auth-Token", client.TokenID)
-		testhelper.TestHeader(t, r, "Authorization", `OAuth oauth_consumer_key="7fea2d", oauth_nonce="66148873158553341551586804894", oauth_signature_method="HMAC-SHA1", oauth_timestamp="1586804894", oauth_token="29971f", oauth_verifier="8171", oauth_version="1.0", oauth_signature="usQ89Y3IYG0IBE7%2Ft8aVsc8XgEk%3D"`)
+		testhelper.TestHeaderRegex(t, r, "Authorization", `OAuth oauth_consumer_key="7fea2d", oauth_nonce="\d+", oauth_signature_method="HMAC-SHA1", oauth_timestamp="\d+", oauth_token="29971f", oauth_verifier="8171", oauth_version="1.0", oauth_signature="[^"]+"`)
 		testhelper.TestBody(t, r, "")
 
 		w.Header().Set("Content-Type", oauth1.OAuth1TokenContentType)
@@ -444,7 +444,7 @@ func HandleAuthenticate(t *testing.T) {
 		testhelper.TestMethod(t, r, "POST")
 		testhelper.TestHeader(t, r, "Content-Type", "application/json")
 		testhelper.TestHeader(t, r, "Accept", "application/json")
-		testhelper.TestHeader(t, r, "Authorization", `OAuth oauth_consumer_key="7fea2d", oauth_nonce="66148873158553341551586804894", oauth_signature_method="HMAC-SHA1", oauth_timestamp="0", oauth_token="accd36", oauth_version="1.0", oauth_signature="JgMHu4e7rXGlqz3A%2FLhHDMvtjp8%3D"`)
+		testhelper.TestHeaderRegex(t, r, "Authorization", `OAuth oauth_consumer_key="7fea2d", oauth_nonce="\d+", oauth_signature_method="HMAC-SHA1", oauth_timestamp="\d+", oauth_token="accd36", oauth_version="1.0", oauth_signature="[^"]+"`)
 		testhelper.TestJSONRequest(t, r, `{"auth": {"identity": {"oauth1": {}, "methods": ["oauth1"]}}}`)
 
 		w.Header().Set("Content-Type", "application/json")

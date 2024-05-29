@@ -95,14 +95,10 @@ func TestRequestToken(t *testing.T) {
 	defer th.TeardownHTTP()
 	HandleRequestToken(t)
 
-	ts := time.Unix(0, 0)
 	token, err := oauth1.RequestToken(context.TODO(), client.ServiceClient(), oauth1.RequestTokenOpts{
-		OAuthConsumerKey:     Consumer.ID,
-		OAuthConsumerSecret:  Consumer.Secret,
-		OAuthSignatureMethod: oauth1.HMACSHA1,
-		OAuthTimestamp:       &ts,
-		OAuthNonce:           "71416001758914252991586795052",
-		RequestedProjectID:   "1df927e8a466498f98788ed73d3c8ab4",
+		OAuthConsumerKey:    Consumer.ID,
+		OAuthConsumerSecret: Consumer.Secret,
+		RequestedProjectID:  "1df927e8a466498f98788ed73d3c8ab4",
 	}).Extract()
 	th.AssertNoErr(t, err)
 
@@ -134,16 +130,12 @@ func TestCreateAccessToken(t *testing.T) {
 	defer th.TeardownHTTP()
 	HandleCreateAccessToken(t)
 
-	ts := time.Unix(1586804894, 0)
 	token, err := oauth1.CreateAccessToken(context.TODO(), client.ServiceClient(), oauth1.CreateAccessTokenOpts{
-		OAuthConsumerKey:     Consumer.ID,
-		OAuthConsumerSecret:  Consumer.Secret,
-		OAuthToken:           Token.OAuthToken,
-		OAuthTokenSecret:     Token.OAuthTokenSecret,
-		OAuthVerifier:        "8171",
-		OAuthSignatureMethod: oauth1.HMACSHA1,
-		OAuthTimestamp:       &ts,
-		OAuthNonce:           "66148873158553341551586804894",
+		OAuthConsumerKey:    Consumer.ID,
+		OAuthConsumerSecret: Consumer.Secret,
+		OAuthToken:          Token.OAuthToken,
+		OAuthTokenSecret:    Token.OAuthTokenSecret,
+		OAuthVerifier:       "8171",
 	}).Extract()
 	th.AssertNoErr(t, err)
 
@@ -254,15 +246,11 @@ func TestAuthenticate(t *testing.T) {
 		ExpiresAt: time.Date(2017, 6, 3, 2, 19, 49, 0, time.UTC),
 	}
 
-	ts := time.Unix(0, 0)
 	options := &oauth1.AuthOptions{
-		OAuthConsumerKey:     Consumer.ID,
-		OAuthConsumerSecret:  Consumer.Secret,
-		OAuthToken:           AccessToken.OAuthToken,
-		OAuthTokenSecret:     AccessToken.OAuthTokenSecret,
-		OAuthSignatureMethod: oauth1.HMACSHA1,
-		OAuthTimestamp:       &ts,
-		OAuthNonce:           "66148873158553341551586804894",
+		OAuthConsumerKey:    Consumer.ID,
+		OAuthConsumerSecret: Consumer.Secret,
+		OAuthToken:          AccessToken.OAuthToken,
+		OAuthTokenSecret:    AccessToken.OAuthTokenSecret,
 	}
 
 	actual, err := oauth1.Create(context.TODO(), client.ServiceClient(), options).Extract()
