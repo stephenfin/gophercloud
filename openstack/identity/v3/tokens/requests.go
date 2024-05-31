@@ -60,8 +60,8 @@ type AuthOptions struct {
 	Scope Scope `json:"-"`
 }
 
-// ToTokenV3CreateMap builds a request body from AuthOptions.
-func (opts *AuthOptions) ToTokenV3CreateMap(scope map[string]any) (map[string]any, error) {
+// ToTokenCreateMap builds a request body from AuthOptions.
+func (opts *AuthOptions) ToTokenCreateMap(scope map[string]any) (map[string]any, error) {
 	gophercloudAuthOpts := gophercloud.AuthOptions{
 		Username:                    opts.Username,
 		UserID:                      opts.UserID,
@@ -76,11 +76,11 @@ func (opts *AuthOptions) ToTokenV3CreateMap(scope map[string]any) (map[string]an
 		ApplicationCredentialSecret: opts.ApplicationCredentialSecret,
 	}
 
-	return gophercloudAuthOpts.ToTokenV3CreateMap(scope)
+	return gophercloudAuthOpts.ToTokenCreateMap(scope)
 }
 
-// ToTokenV3ScopeMap builds a scope request body from AuthOptions.
-func (opts *AuthOptions) ToTokenV3ScopeMap() (map[string]any, error) {
+// ToTokenScopeMap builds a scope request body from AuthOptions.
+func (opts *AuthOptions) ToTokenScopeMap() (map[string]any, error) {
 	scope := gophercloud.AuthScope(opts.Scope)
 
 	gophercloudAuthOpts := gophercloud.AuthOptions{
@@ -89,7 +89,7 @@ func (opts *AuthOptions) ToTokenV3ScopeMap() (map[string]any, error) {
 		DomainName: opts.DomainName,
 	}
 
-	return gophercloudAuthOpts.ToTokenV3ScopeMap()
+	return gophercloudAuthOpts.ToTokenScopeMap()
 }
 
 func (opts *AuthOptions) CanReauth() bool {
@@ -101,9 +101,9 @@ func (opts *AuthOptions) CanReauth() bool {
 	return opts.AllowReauth
 }
 
-// ToTokenV3HeadersMap allows AuthOptions to satisfy the AuthOptionsBuilder
+// ToTokenHeadersMap allows AuthOptions to satisfy the AuthOptionsBuilder
 // interface
-func (opts *AuthOptions) ToTokenV3HeadersMap(map[string]any) (map[string]string, error) {
+func (opts *AuthOptions) ToTokenHeadersMap(map[string]any) (map[string]string, error) {
 	return nil, nil
 }
 
@@ -116,13 +116,13 @@ func subjectTokenHeaders(subjectToken string) map[string]string {
 // Create authenticates and either generates a new token, or changes the Scope
 // of an existing token.
 func Create(ctx context.Context, c *gophercloud.ServiceClient, opts gophercloud.AuthOptionsBuilder) (r CreateResult) {
-	scope, err := opts.ToTokenV3ScopeMap()
+	scope, err := opts.ToTokenScopeMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
 
-	b, err := opts.ToTokenV3CreateMap(scope)
+	b, err := opts.ToTokenCreateMap(scope)
 	if err != nil {
 		r.Err = err
 		return

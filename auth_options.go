@@ -3,11 +3,11 @@ package gophercloud
 // AuthOptionsBuilder provides the ability for extensions to add additional
 // parameters to AuthOptions. Extensions must satisfy all required methods.
 type AuthOptionsBuilder interface {
-	// ToTokenV3CreateMap assembles the Create request body, returning an error
+	// ToTokenCreateMap assembles the Create request body, returning an error
 	// if parameters are missing or inconsistent.
-	ToTokenV3CreateMap(map[string]any) (map[string]any, error)
-	ToTokenV3HeadersMap(map[string]any) (map[string]string, error)
-	ToTokenV3ScopeMap() (map[string]any, error)
+	ToTokenCreateMap(map[string]any) (map[string]any, error)
+	ToTokenHeadersMap(map[string]any) (map[string]string, error)
+	ToTokenScopeMap() (map[string]any, error)
 	CanReauth() bool
 }
 
@@ -149,9 +149,9 @@ func (opts AuthOptions) ToTokenV2CreateMap() (map[string]any, error) {
 	return map[string]any{"auth": authMap}, nil
 }
 
-// ToTokenV3CreateMap allows AuthOptions to satisfy the AuthOptionsBuilder
+// ToTokenCreateMap allows AuthOptions to satisfy the AuthOptionsBuilder
 // interface in the v3 tokens package
-func (opts *AuthOptions) ToTokenV3CreateMap(scope map[string]any) (map[string]any, error) {
+func (opts *AuthOptions) ToTokenCreateMap(scope map[string]any) (map[string]any, error) {
 	type domainReq struct {
 		ID   *string `json:"id,omitempty"`
 		Name *string `json:"name,omitempty"`
@@ -409,9 +409,9 @@ func (opts *AuthOptions) ToTokenV3CreateMap(scope map[string]any) (map[string]an
 	return b, nil
 }
 
-// ToTokenV3ScopeMap builds a scope from AuthOptions and satisfies interface in
+// ToTokenScopeMap builds a scope from AuthOptions and satisfies interface in
 // the v3 tokens package.
-func (opts *AuthOptions) ToTokenV3ScopeMap() (map[string]any, error) {
+func (opts *AuthOptions) ToTokenScopeMap() (map[string]any, error) {
 	// For backwards compatibility.
 	// If AuthOptions.Scope was not set, try to determine it.
 	// This works well for common scenarios.
@@ -521,8 +521,8 @@ func (opts AuthOptions) CanReauth() bool {
 	return opts.AllowReauth
 }
 
-// ToTokenV3HeadersMap allows AuthOptions to satisfy the AuthOptionsBuilder
+// ToTokenHeadersMap allows AuthOptions to satisfy the AuthOptionsBuilder
 // interface in the v3 tokens package.
-func (opts *AuthOptions) ToTokenV3HeadersMap(map[string]any) (map[string]string, error) {
+func (opts *AuthOptions) ToTokenHeadersMap(map[string]any) (map[string]string, error) {
 	return nil, nil
 }

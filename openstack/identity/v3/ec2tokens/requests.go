@@ -257,15 +257,15 @@ func (opts *AuthOptions) Sign(secret, region, service string, timestamp *time.Ti
 	return nil
 }
 
-// ToTokenV3ScopeMap is a dummy method to satisfy the AuthOptionsBuilder
+// ToTokenScopeMap is a dummy method to satisfy the AuthOptionsBuilder
 // interface
-func (opts *AuthOptions) ToTokenV3ScopeMap() (map[string]any, error) {
+func (opts *AuthOptions) ToTokenScopeMap() (map[string]any, error) {
 	return nil, nil
 }
 
-// ToTokenV3HeadersMap allows AuthOptions to satisfy the AuthOptionsBuilder
+// ToTokenHeadersMap allows AuthOptions to satisfy the AuthOptionsBuilder
 // interface
-func (opts *AuthOptions) ToTokenV3HeadersMap(map[string]any) (map[string]string, error) {
+func (opts *AuthOptions) ToTokenHeadersMap(map[string]any) (map[string]string, error) {
 	return nil, nil
 }
 
@@ -274,8 +274,8 @@ func (opts *AuthOptions) CanReauth() bool {
 	return opts.AllowReauth
 }
 
-// ToTokenV3CreateMap formats an AuthOptions into a create request.
-func (opts *AuthOptions) ToTokenV3CreateMap(map[string]any) (map[string]any, error) {
+// ToTokenCreateMap formats an AuthOptions into a create request.
+func (opts *AuthOptions) ToTokenCreateMap(map[string]any) (map[string]any, error) {
 	b, err := gophercloud.BuildRequestBody(opts, "credentials")
 	if err != nil {
 		return nil, err
@@ -294,7 +294,7 @@ func (opts *AuthOptions) ToTokenV3CreateMap(map[string]any) (map[string]any, err
 
 // Create authenticates and either generates a new token from EC2 credentials
 func Create(ctx context.Context, c *gophercloud.ServiceClient, opts gophercloud.AuthOptionsBuilder) (r tokens.CreateResult) {
-	b, err := opts.ToTokenV3CreateMap(nil)
+	b, err := opts.ToTokenCreateMap(nil)
 	if err != nil {
 		r.Err = err
 		return
@@ -314,7 +314,7 @@ func Create(ctx context.Context, c *gophercloud.ServiceClient, opts gophercloud.
 // ValidateS3Token authenticates an S3 request using EC2 credentials. Doesn't
 // generate a new token ID, but returns a tokens.CreateResult.
 func ValidateS3Token(ctx context.Context, c *gophercloud.ServiceClient, opts gophercloud.AuthOptionsBuilder) (r tokens.CreateResult) {
-	b, err := opts.ToTokenV3CreateMap(nil)
+	b, err := opts.ToTokenCreateMap(nil)
 	if err != nil {
 		r.Err = err
 		return

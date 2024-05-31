@@ -70,9 +70,9 @@ type AuthOptions struct {
 	AllowReauth bool
 }
 
-// ToTokenV3HeadersMap builds the headers required for an OAuth1-based create
+// ToTokenHeadersMap builds the headers required for an OAuth1-based create
 // request.
-func (opts AuthOptions) ToTokenV3HeadersMap(headerOpts map[string]any) (map[string]string, error) {
+func (opts AuthOptions) ToTokenHeadersMap(headerOpts map[string]any) (map[string]string, error) {
 	q, err := buildOAuth1QueryString(opts, opts.OAuthTimestamp, "")
 	if err != nil {
 		return nil, err
@@ -95,9 +95,9 @@ func (opts AuthOptions) ToTokenV3HeadersMap(headerOpts map[string]any) (map[stri
 	return headers, nil
 }
 
-// ToTokenV3ScopeMap allows AuthOptions to satisfy the AuthOptionsBuilder
+// ToTokenScopeMap allows AuthOptions to satisfy the AuthOptionsBuilder
 // interface.
-func (opts AuthOptions) ToTokenV3ScopeMap() (map[string]any, error) {
+func (opts AuthOptions) ToTokenScopeMap() (map[string]any, error) {
 	return nil, nil
 }
 
@@ -107,8 +107,8 @@ func (opts AuthOptions) CanReauth() bool {
 	return opts.AllowReauth
 }
 
-// ToTokenV3CreateMap builds a create request body.
-func (opts AuthOptions) ToTokenV3CreateMap(map[string]any) (map[string]any, error) {
+// ToTokenCreateMap builds a create request body.
+func (opts AuthOptions) ToTokenCreateMap(map[string]any) (map[string]any, error) {
 	// identityReq defines the "identity" portion of an OAuth1-based authentication
 	// create request body.
 	type identityReq struct {
@@ -137,7 +137,7 @@ func (opts AuthOptions) ToTokenV3CreateMap(map[string]any) (map[string]any, erro
 // Create authenticates and either generates a new OpenStack token
 // from an OAuth1 token.
 func Create(ctx context.Context, client *gophercloud.ServiceClient, opts gophercloud.AuthOptionsBuilder) (r tokens.CreateResult) {
-	b, err := opts.ToTokenV3CreateMap(nil)
+	b, err := opts.ToTokenCreateMap(nil)
 	if err != nil {
 		r.Err = err
 		return
@@ -148,7 +148,7 @@ func Create(ctx context.Context, client *gophercloud.ServiceClient, opts gopherc
 		"url":    authURL(client),
 	}
 
-	h, err := opts.ToTokenV3HeadersMap(headerOpts)
+	h, err := opts.ToTokenHeadersMap(headerOpts)
 	if err != nil {
 		r.Err = err
 		return

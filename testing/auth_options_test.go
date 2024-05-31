@@ -8,7 +8,7 @@ import (
 	th "github.com/gophercloud/gophercloud/v2/testhelper"
 )
 
-func TestToTokenV3ScopeMap(t *testing.T) {
+func TestToTokenScopeMap(t *testing.T) {
 	projectID := "685038cd-3c25-4faf-8f9b-78c18e503190"
 	projectName := "admin"
 	domainID := "e4b515b8-e453-49d8-9cce-4bec244fa84e"
@@ -137,7 +137,7 @@ func TestToTokenV3ScopeMap(t *testing.T) {
 		},
 	}
 	for _, successCase := range successCases {
-		actual, err := successCase.opts.ToTokenV3ScopeMap()
+		actual, err := successCase.opts.ToTokenScopeMap()
 		th.AssertNoErr(t, err)
 		th.AssertDeepEquals(t, successCase.expected, actual)
 	}
@@ -198,7 +198,7 @@ func TestToTokenV3ScopeMap(t *testing.T) {
 		},
 	}
 	for _, failCase := range failCases {
-		_, err := failCase.opts.ToTokenV3ScopeMap()
+		_, err := failCase.opts.ToTokenScopeMap()
 		th.AssertDeepEquals(t, reflect.TypeOf(failCase.expected), reflect.TypeOf(err))
 	}
 }
