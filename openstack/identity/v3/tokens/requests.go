@@ -2,127 +2,656 @@ package tokens
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/common"
 )
+
+type ScopeDomain struct {
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
+}
+
+type ScopeProject struct {
+	ID     string       `json:"id,omitempty"`
+	Name   string       `json:"name,omitempty"`
+	Domain *ScopeDomain `json:"domain,omitempty"`
+}
+
+type ScopeSystem struct {
+	All bool `json:"all"`
+}
+
+type ScopeTrust struct {
+	ID string `json:"id"`
+}
 
 // Scope allows a created token to be limited to a specific domain or project.
 type Scope struct {
-	ProjectID   string
-	ProjectName string
-	DomainID    string
-	DomainName  string
-	System      bool
-	TrustID     string
+	Project *ScopeProject `json:"project,omitempty"`
+	Domain  *ScopeDomain  `json:"domain,omitempty"`
+	System  *ScopeSystem  `json:"system,omitempty"`
+	Trust   *ScopeTrust   `json:"OS-TRUST:trust,omitempty"`
 }
 
-// AuthOptions represents options for authenticating a user.
-type AuthOptions struct {
-	// IdentityEndpoint specifies the HTTP endpoint that is required to work with
-	// the Identity API of the appropriate version. While it's ultimately needed
-	// by all of the identity services, it will often be populated by a
-	// provider-level function.
-	IdentityEndpoint string `json:"-"`
+type UserDomain struct {
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
+}
 
-	// Username is required if using Identity V2 API. Consult with your provider's
-	// control panel to discover your account's username. In Identity V3, either
-	// UserID or a combination of Username and DomainID or DomainName are needed.
-	Username string `json:"username,omitempty"`
-	UserID   string `json:"id,omitempty"`
+type UserPassword struct {
+	ID       string      `json:"id,omitempty"`
+	Name     string      `json:"name,omitempty"`
+	Domain   *UserDomain `json:"domain,omitempty"`
+	Password string      `json:"password"`
+}
 
-	Password string `json:"password,omitempty"`
+type PasswordIdentity struct {
+	User *UserPassword `json:"user"`
+}
 
-	// Passcode is used in TOTP authentication method
-	Passcode string `json:"passcode,omitempty"`
+type TokenIdentity struct {
+	ID string `json:"id"`
+}
 
-	// At most one of DomainID and DomainName must be provided if using Username
-	// with Identity V3. Otherwise, either are optional.
-	DomainID   string `json:"-"`
-	DomainName string `json:"name,omitempty"`
+type UserTOTP struct {
+	ID       string      `json:"id,omitempty"`
+	Name     string      `json:"name,omitempty"`
+	Domain   *UserDomain `json:"domain,omitempty"`
+	Passcode string      `json:"passcode"`
+}
 
-	// AllowReauth should be set to true if you grant permission for Gophercloud
-	// to cache your credentials in memory, and to allow Gophercloud to attempt
-	// to re-authenticate automatically if/when your token expires.  If you set
-	// it to false, it will not cache these settings, but re-authentication will
-	// not be possible.  This setting defaults to false.
+type TOTPIdentity struct {
+	User *UserTOTP `json:"user"`
+}
+
+type UserApplicationCredential struct {
+	ID     string      `json:"id,omitempty"`
+	Name   string      `json:"name,omitempty"`
+	Domain *UserDomain `json:"domain,omitempty"`
+}
+
+type ApplicationCredentialIdentity struct {
+	ID     string                     `json:"id,omitempty"`
+	Name   string                     `json:"name,omitempty"`
+	Secret string                     `json:"secret"`
+	User   *UserApplicationCredential `json:"user,omitempty"`
+}
+
+type OAuth1Identity struct{}
+
+type Identity struct {
+	Methods               []string                       `json:"methods"`
+	Password              *PasswordIdentity              `json:"password,omitempty"`
+	Token                 *TokenIdentity                 `json:"token,omitempty"`
+	TOTP                  *TOTPIdentity                  `json:"totp,omitempty"`
+	ApplicationCredential *ApplicationCredentialIdentity `json:"application_credential,omitempty"`
+	OAuth1                *OAuth1Identity                `json:"oauth1,omitempty"`
+}
+
+// CreateOpts contains options for creating a Token. This object is passed to
+// the tokens.Create function. For more information about these parameters,
+// see the Token object.
+type CreateOpts struct {
+	// Scope determines the scoping of the authentication request.
+	Scope *Scope `json:"scope,omitempty"`
+	// Identity contains the credentials and information about the provider.
+	// being used.
+	Identity *Identity `json:"identity"`
+	// Authorization is the standard Authorization header, which is used for
+	// some authentication mechanisms (e.g. OAuth1)
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Authorization
+	Authorization string `h:"Authorization" json:"-"`
+
+	// AllowReauth indicates whether these options can be used to allow reauth.
 	AllowReauth bool `json:"-"`
-
-	// TokenID allows users to authenticate (possibly as another user) with an
-	// authentication token ID.
-	TokenID string `json:"-"`
-
-	// Authentication through Application Credentials requires supplying name, project and secret
-	// For project we can use TenantID
-	ApplicationCredentialID     string `json:"-"`
-	ApplicationCredentialName   string `json:"-"`
-	ApplicationCredentialSecret string `json:"-"`
-
-	Scope Scope `json:"-"`
 }
 
-// ToTokenCreateMap builds a request body from AuthOptions.
-func (opts *AuthOptions) ToTokenCreateMap(scope map[string]any) (map[string]any, error) {
-	gophercloudAuthOpts := gophercloud.AuthOptions{
-		Username:                    opts.Username,
-		UserID:                      opts.UserID,
-		Password:                    opts.Password,
-		Passcode:                    opts.Passcode,
-		DomainID:                    opts.DomainID,
-		DomainName:                  opts.DomainName,
-		AllowReauth:                 opts.AllowReauth,
-		TokenID:                     opts.TokenID,
-		ApplicationCredentialID:     opts.ApplicationCredentialID,
-		ApplicationCredentialName:   opts.ApplicationCredentialName,
-		ApplicationCredentialSecret: opts.ApplicationCredentialSecret,
+// CreateOptsBuilder allows extensions to add additional paramters to token
+// create requests.
+type CreateOptsBuilder interface {
+	ToTokenCreateMap() (map[string]any, error)
+	ToTokenHeadersMap(c *gophercloud.ServiceClient) (map[string]string, error)
+}
+
+// nolint:unparam
+func getIdentityFromAuthOptionsToken(opts gophercloud.AuthOptions) (*Identity, error) {
+	// Because we aren't using password authentication, it's an error to also
+	// provide any of the user-based authentication parameters
+	if opts.UserID != "" {
+		return nil, gophercloud.ErrUserIDWithToken{}
+	}
+	if opts.Username != "" {
+		return nil, gophercloud.ErrUsernameWithToken{}
+	}
+	if opts.DomainID != "" {
+		return nil, gophercloud.ErrDomainIDWithToken{}
+	}
+	if opts.DomainName != "" {
+		return nil, gophercloud.ErrDomainNameWithToken{}
 	}
 
-	return gophercloudAuthOpts.ToTokenCreateMap(scope)
+	return &Identity{
+		Methods: []string{"token"},
+		Token: &TokenIdentity{
+			ID: opts.TokenID,
+		},
+	}, nil
 }
 
-// ToTokenScopeMap builds a scope request body from AuthOptions.
-func (opts *AuthOptions) ToTokenScopeMap() (map[string]any, error) {
-	scope := gophercloud.AuthScope(opts.Scope)
-
-	gophercloudAuthOpts := gophercloud.AuthOptions{
-		Scope:      &scope,
-		DomainID:   opts.DomainID,
-		DomainName: opts.DomainName,
+func getIdentityFromAuthOptionsPassword(opts gophercloud.AuthOptions) (*Identity, error) {
+	// At least one of Username and UserID must be specified.
+	if opts.Username == "" && opts.UserID == "" {
+		return nil, gophercloud.ErrUsernameOrUserID{}
 	}
 
-	return gophercloudAuthOpts.ToTokenScopeMap()
-}
-
-func (opts *AuthOptions) CanReauth() bool {
-	if opts.Passcode != "" {
-		// cannot reauth using TOTP passcode
-		return false
+	// If Username is provided, UserID may not be provided.
+	if opts.Username != "" && opts.UserID != "" {
+		return nil, gophercloud.ErrUsernameOrUserID{}
 	}
 
-	return opts.AllowReauth
+	if opts.Password == "" {
+		return nil, gophercloud.ErrMissingPassword{}
+	}
+
+	if opts.Username != "" {
+		// TODO: We need to expose UserDomainName and UserDomainID via AuthOptions
+		// Either UserDomainID or UserDomainName must also be specified.
+		if opts.DomainID == "" && opts.DomainName == "" {
+			return nil, gophercloud.ErrDomainIDOrDomainName{}
+		}
+
+		// If UserDomainName is provided, UserDomainID may not be provided.
+		if opts.DomainName != "" && opts.DomainID != "" {
+			return nil, gophercloud.ErrDomainIDOrDomainName{}
+		}
+
+		var domain *UserDomain
+		if opts.DomainID != "" {
+			// Configure the request for Username and Password authentication
+			// with a UserDomainID.
+			domain = &UserDomain{
+				ID: opts.DomainID,
+			}
+		} else { // opts.DomainName
+			// Configure the request for Username and Password authentication
+			// with a UserDomainName.
+			domain = &UserDomain{
+				Name: opts.DomainName,
+			}
+		}
+
+		return &Identity{
+			Methods: []string{"password"},
+			Password: &PasswordIdentity{
+				User: &UserPassword{
+					Name:     opts.Username,
+					Domain:   domain,
+					Password: opts.Password,
+				},
+			},
+		}, nil
+	} else { // opts.UserID != ""
+		// If UserID is specified, neither UserDomainID nor UserDomainName may be.
+		if opts.DomainID != "" {
+			return nil, gophercloud.ErrDomainIDWithUserID{}
+		}
+		if opts.DomainName != "" {
+			return nil, gophercloud.ErrDomainNameWithUserID{}
+		}
+
+		// Configure the request for Username and Password authentication
+		// with a UserDomainName.
+		// Configure the request for UserID and Password authentication.
+		return &Identity{
+			Methods: []string{"password"},
+			Password: &PasswordIdentity{
+				User: &UserPassword{
+					ID:       opts.UserID,
+					Password: opts.Password,
+				},
+			},
+		}, nil
+	}
 }
 
-// ToTokenHeadersMap allows AuthOptions to satisfy the AuthOptionsBuilder
-// interface
-func (opts *AuthOptions) ToTokenHeadersMap(map[string]any) (map[string]string, error) {
+func getIdentityFromAuthOptionsTOTP(opts gophercloud.AuthOptions) (*Identity, error) {
+	// At least one of Username and UserID must be specified.
+	if opts.Username == "" && opts.UserID == "" {
+		return nil, gophercloud.ErrUsernameOrUserID{}
+	}
+
+	// If Username is provided, UserID may not be provided.
+	if opts.Username != "" && opts.UserID != "" {
+		return nil, gophercloud.ErrUsernameOrUserID{}
+	}
+
+	if opts.Username != "" {
+		// TODO: We need to expose UserDomainName and UserDomainID via AuthOptions
+		// Either UserDomainID or UserDomainName must also be specified...
+		if opts.DomainID == "" && opts.DomainName == "" {
+			return nil, gophercloud.ErrDomainIDOrDomainName{}
+		}
+
+		// ...but not both.
+		if opts.DomainID != "" && opts.DomainName != "" {
+			return nil, gophercloud.ErrDomainIDOrDomainName{}
+		}
+
+		var domain *UserDomain
+		if opts.DomainID != "" {
+			// Configure the request for Username and Password authentication
+			// with a UserDomainID.
+			domain = &UserDomain{
+				ID: opts.DomainID,
+			}
+		} else { // opts.UserDomainName
+			// Configure the request for Username and Password authentication
+			// with a UserDomainName.
+			domain = &UserDomain{
+				Name: opts.DomainName,
+			}
+		}
+
+		return &Identity{
+			Methods: []string{"totp"},
+			TOTP: &TOTPIdentity{
+				User: &UserTOTP{
+					Name:     opts.Username,
+					Domain:   domain,
+					Passcode: opts.Passcode,
+				},
+			},
+		}, nil
+	} else { // opts.UserID != ""
+		// If UserID is specified, neither UserDomainID nor UserDomainName may
+		// be.
+		if opts.DomainID != "" {
+			return nil, gophercloud.ErrDomainIDWithUserID{}
+		}
+		if opts.DomainName != "" {
+			return nil, gophercloud.ErrDomainNameWithUserID{}
+		}
+
+		return &Identity{
+			Methods: []string{"totp"},
+			TOTP: &TOTPIdentity{
+				User: &UserTOTP{
+					ID:       opts.UserID,
+					Passcode: opts.Passcode,
+				},
+			},
+		}, nil
+	}
+}
+
+func getIdentityFromAuthOptionsApplicationCredential(opts gophercloud.AuthOptions) (*Identity, error) {
+	// At least one of ID or Name must be provided.
+	if opts.ApplicationCredentialID == "" && opts.ApplicationCredentialName == "" {
+		return nil, gophercloud.ErrAppCredIDOrAppCredName{}
+	}
+
+	// If ID is provided, Name may not be provided.
+	if opts.ApplicationCredentialID != "" && opts.ApplicationCredentialName != "" {
+		return nil, gophercloud.ErrAppCredIDOrAppCredName{}
+	}
+
+	if opts.ApplicationCredentialSecret == "" {
+		return nil, gophercloud.ErrAppCredMissingSecret{}
+	}
+
+	if opts.ApplicationCredentialID != "" {
+		// Configure the request for ApplicationCredentialID authentication.
+		// https://github.com/openstack/keystoneauth/blob/stable/rocky/keystoneauth1/identity/v3/application_credential.py#L48-L67
+		// There are three kinds of possible application_credential requests
+		// 1. application_credential id + secret
+		// 2. application_credential name + secret + user_id
+		// 3. application_credential name + secret + username + domain_id / domain_name
+		return &Identity{
+			Methods: []string{"application_credential"},
+			ApplicationCredential: &ApplicationCredentialIdentity{
+				ID:     opts.ApplicationCredentialID,
+				Secret: opts.ApplicationCredentialSecret,
+			},
+		}, nil
+	} else { // opts.ApplicationCredentialName != ""
+		// If Username is provided, UserID may not be provided.
+		if opts.Username != "" && opts.UserID != "" {
+			return nil, gophercloud.ErrUsernameOrUserID{}
+		}
+
+		var user *UserApplicationCredential
+
+		if opts.UserID != "" {
+			// UserID could be used without the domain information
+			user = &UserApplicationCredential{
+				ID: opts.UserID,
+			}
+		} else { // Username != ""
+			// TODO: We need to expose UserDomainName and UserDomainID via AuthOptions
+			// Make sure that UserDomainID or UserDomainName are provided among
+			// Username
+			if opts.DomainID == "" && opts.DomainName == "" {
+				return nil, gophercloud.ErrDomainIDOrDomainName{}
+			}
+
+			if opts.DomainID != "" && opts.DomainName != "" {
+				return nil, gophercloud.ErrDomainIDOrDomainName{}
+			}
+
+			domain := &UserDomain{}
+
+			if opts.DomainID != "" {
+				domain.ID = opts.DomainID
+			} else { // opts.UserDomainName != ""
+				domain.Name = opts.DomainName
+			}
+
+			user = &UserApplicationCredential{
+				Name:   opts.Username,
+				Domain: domain,
+			}
+		}
+
+		return &Identity{
+			Methods: []string{"application_credential"},
+			ApplicationCredential: &ApplicationCredentialIdentity{
+				Name:   opts.ApplicationCredentialName,
+				Secret: opts.ApplicationCredentialSecret,
+				User:   user,
+			},
+		}, nil
+	}
+}
+
+// nolint:unparam
+func getIdentityFromAuthOptionsOAuth1(opts gophercloud.AuthOptions) (*Identity, error) {
+	return &Identity{
+		Methods: []string{"oauth1"},
+		OAuth1:  &OAuth1Identity{},
+	}, nil
+}
+
+func getIdentityFromAuthOptionsMultifactor(opts gophercloud.AuthOptions) (*Identity, error) {
+	identity := &Identity{
+		Methods: []string{},
+	}
+	var err error
+
+	authMethods := opts.AuthMethods
+	if len(authMethods) == 0 {
+		authMethods = []string{"password", "totp"}
+	}
+
+	for _, authMethod := range authMethods {
+		var sub *Identity
+		switch authMethod {
+		case "password":
+			sub, err = getIdentityFromAuthOptionsPassword(opts)
+			if err != nil {
+				return nil, err
+			}
+			identity.Password = sub.Password
+		case "totp":
+			sub, err = getIdentityFromAuthOptionsTOTP(opts)
+			if err != nil {
+				return nil, err
+			}
+			identity.TOTP = sub.TOTP
+		default:
+			return nil, fmt.Errorf("unsupported auth method")
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		identity.Methods = append(identity.Methods, sub.Methods[0])
+	}
+	return identity, nil
+}
+
+func getScopeFromAuthOptions(opts gophercloud.AuthOptions) (*Scope, error) {
+	if opts.Scope == nil {
+		if opts.TenantID != "" { // project-scoped (via fallback ID)
+			// TenantID provided. TenantName, DomainID, and DomainName may not be provided.
+			if opts.TenantName != "" {
+				return nil, gophercloud.ErrScopeProjectIDAlone{}
+			}
+			if opts.DomainID != "" {
+				return nil, gophercloud.ErrScopeProjectIDAlone{}
+			}
+			if opts.DomainName != "" {
+				return nil, gophercloud.ErrScopeProjectIDAlone{}
+			}
+
+			return &Scope{
+				Project: &ScopeProject{
+					ID: opts.TenantID,
+				},
+			}, nil
+		} else if opts.TenantName != "" { // project-scoped (via fallback name)
+			// ProjectName provided: either DomainID or DomainName must also be supplied.
+			if opts.DomainID == "" && opts.DomainName == "" {
+				return nil, gophercloud.ErrScopeDomainIDOrDomainName{}
+			}
+
+			// ProjectID may not be supplied.
+			if opts.TenantID != "" {
+				return nil, gophercloud.ErrScopeProjectIDOrProjectName{}
+			}
+
+			var domain *ScopeDomain
+			if opts.DomainID != "" {
+				domain = &ScopeDomain{
+					ID: opts.DomainID,
+				}
+			} else { // opts.DomainName != ""
+				domain = &ScopeDomain{
+					Name: opts.DomainName,
+				}
+			}
+
+			return &Scope{
+				Project: &ScopeProject{
+					Name:   opts.TenantName,
+					Domain: domain,
+				},
+			}, nil
+		}
+		return nil, nil
+	}
+
+	if opts.Scope.System { // system-scoped
+		return &Scope{
+			System: &ScopeSystem{
+				All: true,
+			},
+		}, nil
+	} else if opts.Scope.TrustID != "" {
+		return &Scope{
+			Trust: &ScopeTrust{
+				ID: opts.Scope.TrustID,
+			},
+		}, nil
+	} else if opts.Scope.ProjectName != "" { // project-scoped (via name)
+		// ProjectName provided: either DomainID or DomainName must also be supplied.
+		if opts.Scope.DomainID == "" && opts.Scope.DomainName == "" {
+			return nil, gophercloud.ErrScopeDomainIDOrDomainName{}
+		}
+
+		// ProjectID may not be supplied.
+		if opts.Scope.ProjectID != "" {
+			return nil, gophercloud.ErrScopeProjectIDOrProjectName{}
+		}
+
+		var domain *ScopeDomain
+		if opts.Scope.DomainID != "" {
+			domain = &ScopeDomain{
+				ID: opts.Scope.DomainID,
+			}
+		} else { // opts.Scope.DomainName != ""
+			domain = &ScopeDomain{
+				Name: opts.Scope.DomainName,
+			}
+		}
+
+		return &Scope{
+			Project: &ScopeProject{
+				Name:   opts.Scope.ProjectName,
+				Domain: domain,
+			},
+		}, nil
+	} else if opts.Scope.ProjectID != "" { // project-scoped (via ID)
+		// ProjectID provided. ProjectName, DomainID, and DomainName may not be provided.
+		if opts.Scope.DomainID != "" {
+			return nil, gophercloud.ErrScopeProjectIDAlone{}
+		}
+		if opts.Scope.DomainName != "" {
+			return nil, gophercloud.ErrScopeProjectIDAlone{}
+		}
+
+		return &Scope{
+			Project: &ScopeProject{
+				ID: opts.Scope.ProjectID,
+			},
+		}, nil
+	} else if opts.Scope.DomainName != "" {
+		// DomainName provided. DomainID may not be provided.
+		if opts.Scope.DomainID != "" {
+			return nil, gophercloud.ErrScopeDomainIDOrDomainName{}
+		}
+
+		return &Scope{
+			Domain: &ScopeDomain{
+				Name: opts.Scope.DomainName,
+			},
+		}, nil
+	} else if opts.Scope.DomainID != "" { // domain-scoped (via name)
+		// DomainID provided. DomainName may not be provided.
+		if opts.Scope.DomainName != "" {
+			return nil, gophercloud.ErrScopeDomainIDOrDomainName{}
+		}
+
+		return &Scope{
+			Domain: &ScopeDomain{
+				ID: opts.Scope.DomainID,
+			},
+		}, nil
+	}
+
 	return nil, nil
 }
 
-func subjectTokenHeaders(subjectToken string) map[string]string {
-	return map[string]string{
-		"X-Subject-Token": subjectToken,
+func getAuthorizationHeaderFromAuthOptions(client *gophercloud.ServiceClient, authType string, opts gophercloud.AuthOptions) (string, error) {
+	var authHeader string
+	var err error
+
+	switch authType {
+	case "v3oauth1":
+		oauthOptions := &common.OAuth1SignatureOptions{
+			Token:       opts.OAuthToken,
+			TokenSecret: opts.OAuthTokenSecret,
+		}
+		authHeader, err = common.BuildOAuth1AuthorizationHeader(opts.OAuthConsumerKey, opts.OAuthConsumerSecret, tokenURL(client), "POST", oauthOptions)
+		if err != nil {
+			return "", err
+		}
 	}
+
+	return authHeader, nil
+}
+
+func (opts *CreateOpts) ToTokenCreateMap() (map[string]any, error) {
+	b, err := gophercloud.BuildRequestBody(opts, "auth")
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func (opts *CreateOpts) ToTokenHeadersMap(client *gophercloud.ServiceClient) (map[string]string, error) {
+	h, err := gophercloud.BuildHeaders(opts)
+	if err != nil {
+		return nil, err
+	}
+	return h, err
+}
+
+// FromAuthOptions converts a gophercloud.AuthOptions object to a CreateOpts object
+func FromAuthOptions(client *gophercloud.ServiceClient, opts gophercloud.AuthOptions) (*CreateOpts, error) {
+	authType := opts.AuthType
+	if authType == "" {
+		if opts.TokenID != "" {
+			authType = "v3token"
+		} else if opts.Password != "" && opts.Passcode != "" {
+			authType = "v3multifactor"
+		} else if opts.Password != "" {
+			authType = "v3password"
+		} else if opts.Passcode != "" {
+			authType = "v3totp"
+		} else if opts.ApplicationCredentialSecret != "" {
+			authType = "v3applicationcredential"
+		} else {
+			// We don't have enough information to continue.
+			return nil, gophercloud.ErrMissingPassword{}
+		}
+	}
+
+	var identity *Identity
+	var err error
+	switch authType {
+	case "v3token":
+		identity, err = getIdentityFromAuthOptionsToken(opts)
+	case "v3password":
+		identity, err = getIdentityFromAuthOptionsPassword(opts)
+	case "v3totp":
+		identity, err = getIdentityFromAuthOptionsTOTP(opts)
+	case "v3applicationcredential":
+		identity, err = getIdentityFromAuthOptionsApplicationCredential(opts)
+	case "v3oauth1":
+		identity, err = getIdentityFromAuthOptionsOAuth1(opts)
+	case "v3multifactor":
+		identity, err = getIdentityFromAuthOptionsMultifactor(opts)
+	default:
+		return nil, fmt.Errorf("unsupported auth method")
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	scope, err := getScopeFromAuthOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	authorization, err := getAuthorizationHeaderFromAuthOptions(client, authType, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	createOpts := &CreateOpts{
+		Identity:      identity,
+		Scope:         scope,
+		Authorization: authorization,
+	}
+
+	createOpts.AllowReauth = opts.AllowReauth
+
+	return createOpts, nil
 }
 
 // Create authenticates and either generates a new token, or changes the Scope
 // of an existing token.
-func Create(ctx context.Context, c *gophercloud.ServiceClient, opts gophercloud.AuthOptionsBuilder) (r CreateResult) {
-	scope, err := opts.ToTokenScopeMap()
+func Create(ctx context.Context, c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r CreateResult) {
+	b, err := opts.ToTokenCreateMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
 
-	b, err := opts.ToTokenCreateMap(scope)
+	headers, err := opts.ToTokenHeadersMap(c)
 	if err != nil {
 		r.Err = err
 		return
@@ -130,9 +659,16 @@ func Create(ctx context.Context, c *gophercloud.ServiceClient, opts gophercloud.
 
 	resp, err := c.Post(ctx, tokenURL(c), b, &r.Body, &gophercloud.RequestOpts{
 		OmitHeaders: []string{"X-Auth-Token"},
+		MoreHeaders: headers,
 	})
 	_, r.Header, r.Err = gophercloud.ParseResponse(resp, err)
 	return
+}
+
+func subjectTokenHeaders(subjectToken string) map[string]string {
+	return map[string]string{
+		"X-Subject-Token": subjectToken,
+	}
 }
 
 // Get validates and retrieves information about another token.

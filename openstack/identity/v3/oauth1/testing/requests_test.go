@@ -3,10 +3,8 @@ package testing
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/oauth1"
-	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/tokens"
 	"github.com/gophercloud/gophercloud/v2/pagination"
 	th "github.com/gophercloud/gophercloud/v2/testhelper"
 	"github.com/gophercloud/gophercloud/v2/testhelper/client"
@@ -235,25 +233,4 @@ func TestGetAccessTokenRole(t *testing.T) {
 	th.AssertNoErr(t, err)
 
 	th.AssertEquals(t, UserAccessTokenRole, *role)
-}
-
-func TestAuthenticate(t *testing.T) {
-	th.SetupPersistentPortHTTP(t, 33199)
-	defer th.TeardownHTTP()
-	HandleAuthenticate(t)
-
-	expected := &tokens.Token{
-		ExpiresAt: time.Date(2017, 6, 3, 2, 19, 49, 0, time.UTC),
-	}
-
-	options := &oauth1.AuthOptions{
-		OAuthConsumerKey:    Consumer.ID,
-		OAuthConsumerSecret: Consumer.Secret,
-		OAuthToken:          AccessToken.OAuthToken,
-		OAuthTokenSecret:    AccessToken.OAuthTokenSecret,
-	}
-
-	actual, err := oauth1.Create(context.TODO(), client.ServiceClient(), options).Extract()
-	th.AssertNoErr(t, err)
-	th.CheckDeepEquals(t, expected, actual)
 }

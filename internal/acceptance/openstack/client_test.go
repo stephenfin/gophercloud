@@ -53,21 +53,9 @@ func TestEC2AuthMethod(t *testing.T) {
 
 	ao, err := openstack.AuthOptionsFromEnv()
 	th.AssertNoErr(t, err)
-
-	authOptions := tokens.AuthOptions{
-		Username:   ao.Username,
-		Password:   ao.Password,
-		DomainName: ao.DomainName,
-		DomainID:   ao.DomainID,
-		// We need a scope to get the token roles list
-		Scope: tokens.Scope{
-			ProjectID:   ao.TenantID,
-			ProjectName: ao.TenantName,
-			DomainID:    ao.DomainID,
-			DomainName:  ao.DomainName,
-		},
-	}
-	token, err := tokens.Create(context.TODO(), client, &authOptions).Extract()
+	authOptions, err := tokens.FromAuthOptions(client, ao)
+	th.AssertNoErr(t, err)
+	token, err := tokens.Create(context.TODO(), client, authOptions).Extract()
 	th.AssertNoErr(t, err)
 	tools.PrintResource(t, token)
 
@@ -98,10 +86,12 @@ func TestEC2AuthMethod(t *testing.T) {
 	th.AssertNoErr(t, err)
 
 	ec2AuthOptions := &ec2tokens.AuthOptions{
-		Access: "181920",
+		Access:    "181920",
+		Secret:    "secretKey",
+		Region:    "",
+		Service:   "",
+		Timestamp: nil,
 	}
-	err = ec2AuthOptions.Sign("secretKey", "", "", nil)
-	th.AssertNoErr(t, err)
 
 	err = openstack.AuthenticateV3(context.TODO(), newClient.ProviderClient, ec2AuthOptions, gophercloud.EndpointOpts{})
 	th.AssertNoErr(t, err)

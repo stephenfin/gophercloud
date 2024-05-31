@@ -9,7 +9,6 @@ import (
 	"github.com/gophercloud/gophercloud/v2"
 	tokens2 "github.com/gophercloud/gophercloud/v2/openstack/identity/v2/tokens"
 	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/ec2tokens"
-	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/oauth1"
 	tokens3 "github.com/gophercloud/gophercloud/v2/openstack/identity/v3/tokens"
 	"github.com/gophercloud/gophercloud/v2/openstack/utils"
 )
@@ -123,7 +122,7 @@ func v2auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint st
 		v2Client.Endpoint = endpoint
 	}
 
-	createOpts, err := tokens2.FromAuthOptions(options)
+	createOpts, err := tokens2.FromAuthOptions(v2Client, options)
 	if err != nil {
 		return err
 	}
@@ -191,9 +190,6 @@ func v3auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint st
 	case *gophercloud.AuthOptions:
 		tokenID = v.TokenID
 		passthroughToken = (v.Scope == nil || *v.Scope == gophercloud.AuthScope{})
-	case *tokens3.AuthOptions:
-		tokenID = v.TokenID
-		passthroughToken = (v.Scope == tokens3.Scope{})
 	}
 
 	if tokenID != "" && passthroughToken {
@@ -221,11 +217,22 @@ func v3auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint st
 		var result tokens3.CreateResult
 		switch opts.(type) {
 		case *ec2tokens.AuthOptions:
-			result = ec2tokens.Create(ctx, v3Client, opts)
-		case *oauth1.AuthOptions:
-			result = oauth1.Create(ctx, v3Client, opts)
+			authOpts := opts.(*ec2tokens.AuthOptions)
+			createOpts, err := ec2tokens.FromAuthOptions(v3Client, *authOpts)
+			if err != nil {
+				return err
+			}
+			result = ec2tokens.Create(ctx, v3Client, createOpts)
+		case *gophercloud.AuthOptions:
+			authOpts := opts.(*gophercloud.AuthOptions)
+			createOpts, err := tokens3.FromAuthOptions(v3Client, *authOpts)
+			if err != nil {
+				return err
+			}
+			result = tokens3.Create(ctx, v3Client, createOpts)
 		default:
-			result = tokens3.Create(ctx, v3Client, opts)
+			// TODO: error
+			return nil
 		}
 
 		err = client.SetTokenAndAuthResult(result)
@@ -256,15 +263,7 @@ func v3auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint st
 			o := *ot
 			o.AllowReauth = false
 			tao = &o
-		case *tokens3.AuthOptions:
-			o := *ot
-			o.AllowReauth = false
-			tao = &o
 		case *ec2tokens.AuthOptions:
-			o := *ot
-			o.AllowReauth = false
-			tao = &o
-		case *oauth1.AuthOptions:
 			o := *ot
 			o.AllowReauth = false
 			tao = &o

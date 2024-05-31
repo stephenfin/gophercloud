@@ -22,20 +22,10 @@ func TestOAuth1CRUD(t *testing.T) {
 	ao, err := openstack.AuthOptionsFromEnv()
 	th.AssertNoErr(t, err)
 
-	authOptions := tokens.AuthOptions{
-		Username:   ao.Username,
-		Password:   ao.Password,
-		DomainName: ao.DomainName,
-		DomainID:   ao.DomainID,
-		// We need a scope to get the token roles list
-		Scope: tokens.Scope{
-			ProjectID:   ao.TenantID,
-			ProjectName: ao.TenantName,
-			DomainID:    ao.DomainID,
-			DomainName:  ao.DomainName,
-		},
-	}
-	tokenRes := tokens.Create(context.TODO(), client, &authOptions)
+	authOptions, err := tokens.FromAuthOptions(client, ao)
+	th.AssertNoErr(t, err)
+
+	tokenRes := tokens.Create(context.TODO(), client, authOptions)
 	token, err := tokenRes.Extract()
 	th.AssertNoErr(t, err)
 	tools.PrintResource(t, token)
@@ -189,13 +179,15 @@ func TestOAuth1CRUD(t *testing.T) {
 	th.AssertNoErr(t, err)
 
 	// Opts to auth using an oauth1 credential
-	oAuthAuthOptions := &oauth1.AuthOptions{
+	ao = gophercloud.AuthOptions{
+		AuthType:            "v3oauth1",
 		OAuthConsumerKey:    consumer.ID,
 		OAuthConsumerSecret: consumer.Secret,
 		OAuthToken:          accessToken.OAuthToken,
 		OAuthTokenSecret:    accessToken.OAuthTokenSecret,
 	}
-	err = openstack.AuthenticateV3(context.TODO(), newClient.ProviderClient, oAuthAuthOptions, gophercloud.EndpointOpts{})
+
+	err = openstack.AuthenticateV3(context.TODO(), newClient.ProviderClient, &ao, gophercloud.EndpointOpts{})
 	th.AssertNoErr(t, err)
 
 	// Test OAuth1 token extract

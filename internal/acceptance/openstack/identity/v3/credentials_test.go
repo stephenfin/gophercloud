@@ -22,20 +22,10 @@ func TestCredentialsCRUD(t *testing.T) {
 	ao, err := openstack.AuthOptionsFromEnv()
 	th.AssertNoErr(t, err)
 
-	authOptions := tokens.AuthOptions{
-		Username:   ao.Username,
-		Password:   ao.Password,
-		DomainName: ao.DomainName,
-		DomainID:   ao.DomainID,
-		// We need a scope to get the token roles list
-		Scope: tokens.Scope{
-			ProjectID:   ao.TenantID,
-			ProjectName: ao.TenantName,
-			DomainID:    ao.DomainID,
-			DomainName:  ao.DomainName,
-		},
-	}
-	token, err := tokens.Create(context.TODO(), client, &authOptions).Extract()
+	authOptions, err := tokens.FromAuthOptions(client, ao)
+	th.AssertNoErr(t, err)
+
+	token, err := tokens.Create(context.TODO(), client, authOptions).Extract()
 	th.AssertNoErr(t, err)
 	tools.PrintResource(t, token)
 
@@ -99,20 +89,10 @@ func TestCredentialsValidateS3(t *testing.T) {
 	ao, err := openstack.AuthOptionsFromEnv()
 	th.AssertNoErr(t, err)
 
-	authOptions := tokens.AuthOptions{
-		Username:   ao.Username,
-		Password:   ao.Password,
-		DomainName: ao.DomainName,
-		DomainID:   ao.DomainID,
-		// We need a scope to get the token roles list
-		Scope: tokens.Scope{
-			ProjectID:   ao.TenantID,
-			ProjectName: ao.TenantName,
-			DomainID:    ao.DomainID,
-			DomainName:  ao.DomainName,
-		},
-	}
-	token, err := tokens.Create(context.TODO(), client, &authOptions).Extract()
+	authOptions, err := tokens.FromAuthOptions(client, ao)
+	th.AssertNoErr(t, err)
+
+	token, err := tokens.Create(context.TODO(), client, authOptions).Extract()
 	th.AssertNoErr(t, err)
 	tools.PrintResource(t, token)
 
@@ -146,13 +126,18 @@ func TestCredentialsValidateS3(t *testing.T) {
 
 	opts := ec2tokens.AuthOptions{
 		Access: "181920",
+		Secret: "secretKey",
+		Region: "",
+		// auth will fail if service is not s3
+		Service:   "s3",
+		Timestamp: nil,
 	}
-	// auth will fail if service is not s3
-	err = opts.Sign("secretKey", "", "s3", nil)
+
+	authOpts, err := ec2tokens.FromAuthOptions(client, opts)
 	th.AssertNoErr(t, err)
 
 	// Validate a credential
-	token, err = ec2tokens.ValidateS3Token(context.TODO(), client, &opts).Extract()
+	token, err = ec2tokens.ValidateS3Token(context.TODO(), client, authOpts).Extract()
 	th.AssertNoErr(t, err)
 	tools.PrintResource(t, token)
 }

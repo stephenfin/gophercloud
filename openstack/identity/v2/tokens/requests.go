@@ -64,7 +64,7 @@ func (opts CreateOpts) ToTokenCreateMap() (map[string]any, error) {
 }
 
 // FromAuthOptions converts an AuthOptions object to a CreateOpts object
-func FromAuthOptions(opts gophercloud.AuthOptions) (*CreateOpts, error) {
+func FromAuthOptions(client *gophercloud.ServiceClient, opts gophercloud.AuthOptions) (*CreateOpts, error) {
 	createOpts := &CreateOpts{
 		TenantID:   opts.TenantID,
 		TenantName: opts.TenantName,

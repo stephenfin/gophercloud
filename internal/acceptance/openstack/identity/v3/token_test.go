@@ -22,13 +22,10 @@ func TestTokensGet(t *testing.T) {
 	ao, err := openstack.AuthOptionsFromEnv()
 	th.AssertNoErr(t, err)
 
-	authOptions := tokens.AuthOptions{
-		Username:   ao.Username,
-		Password:   ao.Password,
-		DomainName: "default",
-	}
+	authOptions, err := tokens.FromAuthOptions(client, ao)
+	th.AssertNoErr(t, err)
 
-	token, err := tokens.Create(context.TODO(), client, &authOptions).Extract()
+	token, err := tokens.Create(context.TODO(), client, authOptions).Extract()
 	th.AssertNoErr(t, err)
 	tools.PrintResource(t, token)
 

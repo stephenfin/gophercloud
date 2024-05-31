@@ -21,21 +21,10 @@ func TestEC2CredentialsCRD(t *testing.T) {
 	ao, err := openstack.AuthOptionsFromEnv()
 	th.AssertNoErr(t, err)
 
-	authOptions := tokens.AuthOptions{
-		Username:   ao.Username,
-		Password:   ao.Password,
-		DomainName: ao.DomainName,
-		DomainID:   ao.DomainID,
-		// We need a scope to get the token roles list
-		Scope: tokens.Scope{
-			ProjectID:   ao.TenantID,
-			ProjectName: ao.TenantName,
-			DomainID:    ao.DomainID,
-			DomainName:  ao.DomainName,
-		},
-	}
+	authOptions, err := tokens.FromAuthOptions(client, ao)
+	th.AssertNoErr(t, err)
 
-	res := tokens.Create(context.TODO(), client, &authOptions)
+	res := tokens.Create(context.TODO(), client, authOptions)
 	th.AssertNoErr(t, res.Err)
 	token, err := res.Extract()
 	th.AssertNoErr(t, err)

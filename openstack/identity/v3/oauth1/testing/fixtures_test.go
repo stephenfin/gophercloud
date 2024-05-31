@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/oauth1"
-	tokens "github.com/gophercloud/gophercloud/v2/openstack/identity/v3/tokens/testing"
 	"github.com/gophercloud/gophercloud/v2/testhelper"
 	"github.com/gophercloud/gophercloud/v2/testhelper/client"
 )
@@ -434,21 +433,5 @@ func HandleGetAccessTokenRole(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, ListUserAccessTokenRoleResponse)
-	})
-}
-
-// HandleAuthenticate creates an HTTP handler at `/auth/tokens` on the
-// test handler mux that responds with an OpenStack token.
-func HandleAuthenticate(t *testing.T) {
-	testhelper.Mux.HandleFunc("/auth/tokens", func(w http.ResponseWriter, r *http.Request) {
-		testhelper.TestMethod(t, r, "POST")
-		testhelper.TestHeader(t, r, "Content-Type", "application/json")
-		testhelper.TestHeader(t, r, "Accept", "application/json")
-		testhelper.TestHeaderRegex(t, r, "Authorization", `OAuth oauth_consumer_key="7fea2d", oauth_nonce="\d+", oauth_signature_method="HMAC-SHA1", oauth_timestamp="\d+", oauth_token="accd36", oauth_version="1.0", oauth_signature="[^"]+"`)
-		testhelper.TestJSONRequest(t, r, `{"auth": {"identity": {"oauth1": {}, "methods": ["oauth1"]}}}`)
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, tokens.TokenOutput)
 	})
 }

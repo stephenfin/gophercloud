@@ -59,7 +59,7 @@ func EC2CredentialsBuildCanonicalQueryStringV2(params map[string]string) string 
 // EC2CredentialsBuildStringToSignV2 builds a string to sign an AWS Signature
 // V2.
 // https://github.com/openstack/python-keystoneclient/blob/stable/train/keystoneclient/contrib/ec2/utils.py#L148
-func EC2CredentialsBuildStringToSignV2(opts AuthOptions) []byte {
+func EC2CredentialsBuildStringToSignV2(opts CreateOptions) []byte {
 	stringToSign := strings.Join([]string{
 		opts.Verb,
 		opts.Host,
@@ -114,7 +114,7 @@ func EC2CredentialsBuildSignatureKeyV4(secret, region, service string, date time
 // EC2CredentialsBuildStringToSignV4 builds an AWS v4 signature string to sign
 // based on input parameters.
 // https://github.com/openstack/python-keystoneclient/blob/stable/train/keystoneclient/contrib/ec2/utils.py#L251
-func EC2CredentialsBuildStringToSignV4(opts AuthOptions, signedHeaders, bodyHash, region, service string, date time.Time) []byte {
+func EC2CredentialsBuildStringToSignV4(opts CreateOptions, signedHeaders, bodyHash, region, service string, date time.Time) []byte {
 	scope := strings.Join([]string{
 		date.Format(EC2CredentialsDateFormatV4),
 		region,
@@ -149,7 +149,7 @@ func EC2CredentialsBuildSignatureV4(key []byte, stringToSign []byte) string {
 
 // EC2CredentialsBuildAuthorizationHeaderV4 builds an AWS v4 Authorization
 // header based on auth parameters, date and signature
-func EC2CredentialsBuildAuthorizationHeaderV4(opts AuthOptions, signedHeaders, signature, region, service string, date time.Time) string {
+func EC2CredentialsBuildAuthorizationHeaderV4(opts CreateOptions, signedHeaders, signature, region, service string, date time.Time) string {
 	return fmt.Sprintf("%s Credential=%s/%s/%s/%s/%s, SignedHeaders=%s, Signature=%s",
 		EC2CredentialsAwsHmacV4,
 		opts.Access,
@@ -161,8 +161,50 @@ func EC2CredentialsBuildAuthorizationHeaderV4(opts AuthOptions, signedHeaders, s
 		signature)
 }
 
-// AuthOptions represents options for authenticating a user using EC2 credentials.
+// CreateOptions represents options for authenticating a user using EC2 credentials.
 type AuthOptions struct {
+	// Access is the EC2 Credential Access ID.
+	Access string `json:"access" required:"true"`
+	// BodyHash is a HTTP request body sha256 hash. Optional.
+	BodyHash *string `json:"body_hash"`
+	// Headers is a map of HTTP request headers. Optional.
+	Headers map[string]string `json:"headers"`
+	// Host is a HTTP request Host header. Used to calculate an AWS
+	// Signature V2. For Signature V4 set the Host inside Headers map.
+	// Optional.
+	Host string `json:"host"`
+	// Params is a map of GET method parameters. Optional.
+	Params map[string]string `json:"params"`
+	// Path is a HTTP request path. Optional.
+	Path string `json:"path"`
+	// Signature can be either a []byte (encoded to base64 automatically) or
+	// a string.
+	Signature any `json:"signature"`
+	// Token is a []byte string (encoded to base64 automatically) which was
+	// signed by an EC2 secret key. Used by S3 tokens for validation only.
+	// Token must be set with a Signature. If a Signature is not provided,
+	// a Token will be generated automatically along with a Signature.
+	Token []byte `json:"token,omitempty"`
+	// Verb is a HTTP request method. Optional.
+	Verb string `json:"verb"`
+
+	// Signature-signing parameters. Optional.
+	Secret    string
+	Region    string
+	Service   string
+	Timestamp *time.Time
+
+	// AllowReauth allows Gophercloud to re-authenticate automatically
+	// if/when your token expires.
+	AllowReauth bool `json:"-"`
+}
+
+func (opts AuthOptions) CanReauth() bool {
+	return opts.AllowReauth
+}
+
+// CreateOptions represents options for authenticating a user using EC2 credentials.
+type CreateOptions struct {
 	// Access is the EC2 Credential Access ID.
 	Access string `json:"access" required:"true"`
 	// BodyHash is a HTTP request body sha256 hash. Optional.
@@ -193,9 +235,15 @@ type AuthOptions struct {
 	AllowReauth bool `json:"-"`
 }
 
+// CreateOptsBuilder allows extensions to add additional paramters to token
+// create requests.
+type CreateOptsBuilder interface {
+	ToTokenCreateMap() (map[string]any, error)
+}
+
 // Sign generates and sets the signature and any headers required for both AWS
 // Signature v2 and AWS Signature v4.
-func (opts *AuthOptions) Sign(secret, region, service string, timestamp *time.Time) error {
+func (opts *CreateOptions) Sign(secret, region, service string, timestamp *time.Time) error {
 	// detect and process a signature v2
 	if v, ok := opts.Params["SignatureVersion"]; ok && v == "2" {
 		if v, ok := opts.Params["SignatureMethod"]; ok {
@@ -257,25 +305,8 @@ func (opts *AuthOptions) Sign(secret, region, service string, timestamp *time.Ti
 	return nil
 }
 
-// ToTokenScopeMap is a dummy method to satisfy the AuthOptionsBuilder
-// interface
-func (opts *AuthOptions) ToTokenScopeMap() (map[string]any, error) {
-	return nil, nil
-}
-
-// ToTokenHeadersMap allows AuthOptions to satisfy the AuthOptionsBuilder
-// interface
-func (opts *AuthOptions) ToTokenHeadersMap(map[string]any) (map[string]string, error) {
-	return nil, nil
-}
-
-// CanReauth is a method method to satisfy the AuthOptionsBuilder interface
-func (opts *AuthOptions) CanReauth() bool {
-	return opts.AllowReauth
-}
-
-// ToTokenCreateMap formats an AuthOptions into a create request.
-func (opts *AuthOptions) ToTokenCreateMap(map[string]any) (map[string]any, error) {
+// ToTokenCreateMap formats an CreateOpts into a create request.
+func (opts *CreateOptions) ToTokenCreateMap() (map[string]any, error) {
 	b, err := gophercloud.BuildRequestBody(opts, "credentials")
 	if err != nil {
 		return nil, err
@@ -292,9 +323,33 @@ func (opts *AuthOptions) ToTokenCreateMap(map[string]any) (map[string]any, error
 	return b, nil
 }
 
+// FromAuthOptions converts a AuthOptions object to a CreateOpts object
+func FromAuthOptions(client *gophercloud.ServiceClient, opts AuthOptions) (*CreateOptions, error) {
+	createOpts := &CreateOptions{
+		Access:      opts.Access,
+		BodyHash:    opts.BodyHash,
+		Headers:     opts.Headers,
+		Host:        opts.Host,
+		Params:      opts.Params,
+		Path:        opts.Path,
+		Signature:   opts.Signature,
+		Verb:        opts.Verb,
+		AllowReauth: opts.AllowReauth,
+	}
+
+	if opts.Signature == nil {
+		err := createOpts.Sign(opts.Secret, opts.Region, opts.Service, opts.Timestamp)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return createOpts, nil
+}
+
 // Create authenticates and either generates a new token from EC2 credentials
-func Create(ctx context.Context, c *gophercloud.ServiceClient, opts gophercloud.AuthOptionsBuilder) (r tokens.CreateResult) {
-	b, err := opts.ToTokenCreateMap(nil)
+func Create(ctx context.Context, c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r tokens.CreateResult) {
+	b, err := opts.ToTokenCreateMap()
 	if err != nil {
 		r.Err = err
 		return
@@ -313,8 +368,8 @@ func Create(ctx context.Context, c *gophercloud.ServiceClient, opts gophercloud.
 
 // ValidateS3Token authenticates an S3 request using EC2 credentials. Doesn't
 // generate a new token ID, but returns a tokens.CreateResult.
-func ValidateS3Token(ctx context.Context, c *gophercloud.ServiceClient, opts gophercloud.AuthOptionsBuilder) (r tokens.CreateResult) {
-	b, err := opts.ToTokenCreateMap(nil)
+func ValidateS3Token(ctx context.Context, c *gophercloud.ServiceClient, opts CreateOptsBuilder) (r tokens.CreateResult) {
+	b, err := opts.ToTokenCreateMap()
 	if err != nil {
 		r.Err = err
 		return

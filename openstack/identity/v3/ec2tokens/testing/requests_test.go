@@ -16,7 +16,7 @@ import (
 )
 
 // authTokenPost verifies that providing certain AuthOptions and Scope results in an expected JSON structure.
-func authTokenPost(t *testing.T, options ec2tokens.AuthOptions, requestJSON string) {
+func authTokenPost(t *testing.T, options ec2tokens.CreateOptions, requestJSON string) {
 	testhelper.SetupHTTP()
 	defer testhelper.TeardownHTTP()
 
@@ -45,7 +45,7 @@ func authTokenPost(t *testing.T, options ec2tokens.AuthOptions, requestJSON stri
 }
 
 func TestCreateV2(t *testing.T) {
-	credentials := ec2tokens.AuthOptions{
+	credentials := ec2tokens.CreateOptions{
 		Access: "a7f1e798b7c2417cba4a02de97dc3cdc",
 		Host:   "localhost",
 		Path:   "/",
@@ -83,7 +83,7 @@ func TestCreateV2(t *testing.T) {
 
 func TestCreateV4(t *testing.T) {
 	bodyHash := "foo"
-	credentials := ec2tokens.AuthOptions{
+	credentials := ec2tokens.CreateOptions{
 		Access:   "a7f1e798b7c2417cba4a02de97dc3cdc",
 		BodyHash: &bodyHash,
 		Path:     "/",
@@ -119,7 +119,7 @@ func TestCreateV4(t *testing.T) {
 }
 
 func TestCreateV4Empty(t *testing.T) {
-	credentials := ec2tokens.AuthOptions{
+	credentials := ec2tokens.CreateOptions{
 		Access:   "a7f1e798b7c2417cba4a02de97dc3cdc",
 		BodyHash: new(string),
 	}
@@ -144,7 +144,7 @@ func TestCreateV4Empty(t *testing.T) {
 }
 
 func TestCreateV4Headers(t *testing.T) {
-	credentials := ec2tokens.AuthOptions{
+	credentials := ec2tokens.CreateOptions{
 		Access:   "a7f1e798b7c2417cba4a02de97dc3cdc",
 		BodyHash: new(string),
 		Path:     "/",
@@ -182,7 +182,7 @@ func TestCreateV4Headers(t *testing.T) {
 }
 
 func TestCreateV4WithSignature(t *testing.T) {
-	credentials := ec2tokens.AuthOptions{
+	credentials := ec2tokens.CreateOptions{
 		Access:    "a7f1e798b7c2417cba4a02de97dc3cdc",
 		BodyHash:  new(string),
 		Path:      "/",
@@ -229,7 +229,7 @@ func TestEC2CredentialsBuildCanonicalQueryStringV2(t *testing.T) {
 }
 
 func TestEC2CredentialsBuildStringToSignV2(t *testing.T) {
-	opts := ec2tokens.AuthOptions{
+	opts := ec2tokens.CreateOptions{
 		Verb: "GET",
 		Host: "localhost",
 		Path: "/",
@@ -268,7 +268,7 @@ func TestEC2CredentialsBuildSignatureKeyV4(t *testing.T) {
 }
 
 func TestEC2CredentialsBuildSignatureV4(t *testing.T) {
-	opts := ec2tokens.AuthOptions{
+	opts := ec2tokens.CreateOptions{
 		Verb: "GET",
 		Path: "/",
 		Headers: map[string]string{
