@@ -320,8 +320,12 @@ func ValidateS3Token(ctx context.Context, c *gophercloud.ServiceClient, opts gop
 		return
 	}
 
+	fmt.Printf("body (before): %+v\n", b)
+
 	// delete unused element, since it is used in ec2tokens only
 	deleteBodyElements(b, "body_hash", "headers", "host", "params", "path", "verb")
+
+	fmt.Printf("body (after): %+v\n", b)
 
 	resp, err := c.Post(ctx, s3tokensURL(c), b, &r.Body, &gophercloud.RequestOpts{
 		MoreHeaders: map[string]string{"X-Auth-Token": ""},
