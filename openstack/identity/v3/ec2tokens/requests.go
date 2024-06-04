@@ -199,8 +199,13 @@ type AuthOptions struct {
 	AllowReauth bool `json:"-"`
 }
 
-func (opts AuthOptions) ToCreateOpts(c *gophercloud.ServiceClient) (gophercloud.TokenCreateOptsBuilder, error) {
-	return FromAuthOptions(c, opts)
+func (opts AuthOptions) Authenticate(ctx context.Context, client *gophercloud.ServiceClient) error {
+	createOpts, err := FromAuthOptions(client, opts)
+	if err != nil {
+		return err
+	}
+	Create(ctx, client, createOpts)
+	return nil
 }
 
 func (opts AuthOptions) CanReauth() bool {

@@ -1,17 +1,14 @@
 package gophercloud
 
+import (
+	"context"
+)
+
 // AuthOptionsBuilder provides the ability for extensions to add additional
 // parameters to AuthOptions. Extensions must satisfy all required methods.
 type AuthOptionsBuilder interface {
-	ToCreateOpts(*ServiceClient) (TokenCreateOptsBuilder, error)
+	Authenticate(ctx context.Context, client *ServiceClient) error
 	CanReauth() bool
-}
-
-// TokenCreateOptsBuilder allows extensions to add additional parameters to
-// token create requests.
-type TokenCreateOptsBuilder interface {
-	ToTokenCreateMap() (map[string]any, error)
-	ToTokenHeadersMap(*ServiceClient) (map[string]string, error)
 }
 
 /*
@@ -138,10 +135,10 @@ type AuthScope struct {
 	TrustID     string
 }
 
-// ToCreateOpts allows AuthOptions to satisfy the AuthOptionsBuilder interface.
+// Authenticate allows AuthOptions to satisfy the AuthOptionsBuilder interface.
 // It's a no-op and is never called since AuthOptions is special-cased.
-func (opts AuthOptions) ToCreateOpts(c *ServiceClient) (TokenCreateOptsBuilder, error) {
-	return nil, nil
+func (opts AuthOptions) Authenticate(context.Context, *ServiceClient) error {
+	return nil
 }
 
 func (opts AuthOptions) CanReauth() bool {
