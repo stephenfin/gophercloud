@@ -231,8 +231,11 @@ func v3auth(ctx context.Context, client *gophercloud.ProviderClient, endpoint st
 			}
 			result = tokens3.Create(ctx, v3Client, createOpts)
 		default:
-			// TODO: error
-			return nil
+			createOpts, err := opts.ToCreateOpts(v3Client)
+			if err != nil {
+				return err
+			}
+			result = tokens3.Create(ctx, v3Client, createOpts)
 		}
 
 		err = client.SetTokenAndAuthResult(result)

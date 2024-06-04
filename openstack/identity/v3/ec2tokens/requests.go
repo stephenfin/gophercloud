@@ -199,6 +199,10 @@ type AuthOptions struct {
 	AllowReauth bool `json:"-"`
 }
 
+func (opts AuthOptions) ToCreateOpts(c *gophercloud.ServiceClient) (gophercloud.TokenCreateOptsBuilder, error) {
+	return FromAuthOptions(c, opts)
+}
+
 func (opts AuthOptions) CanReauth() bool {
 	return opts.AllowReauth
 }
@@ -305,7 +309,7 @@ func (opts *CreateOptions) Sign(secret, region, service string, timestamp *time.
 	return nil
 }
 
-// ToTokenCreateMap formats an CreateOpts into a create request.
+// ToTokenCreateMap formats an CreateOpts into a create body request.
 func (opts *CreateOptions) ToTokenCreateMap() (map[string]any, error) {
 	b, err := gophercloud.BuildRequestBody(opts, "credentials")
 	if err != nil {
@@ -321,6 +325,11 @@ func (opts *CreateOptions) ToTokenCreateMap() (map[string]any, error) {
 	}
 
 	return b, nil
+}
+
+// ToTokenCreateMap formats an CreateOpts into a create header request.
+func (opts *CreateOptions) ToTokenHeadersMap(*gophercloud.ServiceClient) (map[string]string, error) {
+	return nil, nil
 }
 
 // FromAuthOptions converts a AuthOptions object to a CreateOpts object
