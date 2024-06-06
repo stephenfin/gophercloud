@@ -132,6 +132,10 @@ func AuthOptionsFromEnvV3() (AuthOptionsBuilder, error) {
 			Scope:                       scope,
 		}
 	case "v3token":
+		opts = V3TokenOpts{
+			Token: os.Getenv("OS_TOKEN"),
+			Scope: scope,
+		}
 	case "v3multifactor":
 	default:
 		return nil, gophercloud.ErrUnsupportedAuthType{AuthType: authType}
