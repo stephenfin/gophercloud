@@ -101,6 +101,36 @@ func AuthOptionsFromEnvV3() (AuthOptionsBuilder, error) {
 
 	var opts AuthV3Mechanism
 
+	if authType == "v3multifactor" {
+		opts = V3MultifactorOpts{
+			Scope: scope,
+		}
+		for _, authType := range authMethods {
+			var authOpts = authMechanismFromType(authType, scope)
+			if authOpts == nil {
+				return nil, gophercloud.ErrUnsupportedAuthType{AuthType: authType}
+			}
+		}
+	} else {
+		opts = authMechanismFromType(authType, scope)
+		if opts == nil {
+			return nil, gophercloud.ErrUnsupportedAuthType{AuthType: authType}
+		}
+	}
+
+	ao := &AuthOptionsV3{
+		AuthURL:     authURL,
+		AuthType:    authType,
+		AuthMethods: authMethods,
+		Auth:        opts,
+	}
+
+	return ao, nil
+}
+
+func authMechanismFromType(authType string, scope *Scope) AuthV3Mechanism {
+	var opts AuthV3Mechanism
+
 	switch authType {
 	case "v3password":
 		opts = V3PasswordOpts{
@@ -136,17 +166,10 @@ func AuthOptionsFromEnvV3() (AuthOptionsBuilder, error) {
 			Token: os.Getenv("OS_TOKEN"),
 			Scope: scope,
 		}
-	case "v3multifactor":
+	case "v3multifactor": // this should never get here
 	default:
-		return nil, gophercloud.ErrUnsupportedAuthType{AuthType: authType}
+		return nil
 	}
 
-	ao := &AuthOptionsV3{
-		AuthURL:     authURL,
-		AuthType:    authType,
-		AuthMethods: authMethods,
-		Auth:        opts,
-	}
-
-	return ao, nil
+	return opts
 }
