@@ -61,6 +61,17 @@ func (e ErrMissingEnvironmentVariable) Error() string {
 	return e.choseErrString()
 }
 
+// ErrUnsupportedAuthType indicates that the auth method provided is not supported.
+type ErrUnsupportedAuthType struct {
+	BaseError
+	AuthType string
+}
+
+func (e ErrUnsupportedAuthType) Error() string {
+	e.DefaultErrString = fmt.Sprintf("The %s auth type is not supported", (e.AuthType))
+	return e.choseErrString()
+}
+
 // ErrMissingAnyoneOfEnvironmentVariables is the error when anyone of the environment variables
 // is required in a particular situation but not provided by the user
 type ErrMissingAnyoneOfEnvironmentVariables struct {
