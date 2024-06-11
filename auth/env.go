@@ -112,6 +112,14 @@ func AuthOptionsFromEnvV3() (AuthOptionsBuilder, error) {
 			Scope:          scope,
 		}
 	case "v3totp":
+		opts = V3TOTPOpts{
+			Username:       os.Getenv("OS_USERNAME"),
+			UserID:         os.Getenv("OS_USERID"),
+			Passcode:       os.Getenv("OS_PASSCODE"),
+			UserDomainID:   os.Getenv("OS_USER_DOMAIN_ID"),
+			UserDomainName: os.Getenv("OS_USER_DOMAIN_NAME"),
+			Scope:          scope,
+		}
 	case "v3applicationcredential":
 	case "v3token":
 	case "v3multifactor":
