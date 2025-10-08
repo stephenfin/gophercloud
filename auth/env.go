@@ -20,13 +20,16 @@ func AuthOptionsFromEnvV2() (*AuthOptionsV2, error) {
 	authURL := os.Getenv("OS_AUTH_URL")
 	authType := "" // v2 doesn't have the concept of auth types: this is purely for consistency
 
+	tenantName := os.Getenv("OS_TENANT_NAME")
+	tenantID := os.Getenv("OS_TENANT_ID")
+
 	username := os.Getenv("OS_USERNAME")
 	password := os.Getenv("OS_PASSWORD")
 	token := os.Getenv("OS_TOKEN")
 
-	if username != "" && password != "" {
+	if password != "" {
 		authType = "v2password"
-	} else if token != "" {
+	} else {
 		authType = "v2token"
 	}
 
@@ -34,7 +37,18 @@ func AuthOptionsFromEnvV2() (*AuthOptionsV2, error) {
 
 	switch authType {
 	case "v2password":
+		opts = V2PasswordOpts{
+			Username:   username,
+			Password:   password,
+			TenantID:   tenantID,
+			TenantName: tenantName,
+		}
 	case "v2token":
+		opts = V2TokenOpts{
+			Token:      token,
+			TenantID:   tenantID,
+			TenantName: tenantName,
+		}
 	default:
 		return nil, gophercloud.ErrUnsupportedAuthType{AuthType: authType}
 	}
