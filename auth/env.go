@@ -92,10 +92,25 @@ func AuthOptionsFromEnvV3() (AuthOptionsBuilder, error) {
 		}
 	}
 
+	scope := &Scope{
+		DomainID:    os.Getenv("OS_DOMAIN_ID"),
+		DomainName:  os.Getenv("OS_DOMAIN_NAME"),
+		ProjectID:   os.Getenv("OS_PROJECT_ID"),
+		ProjectName: os.Getenv("OS_PROJECT_NAME"),
+	}
+
 	var opts AuthV3Mechanism
 
 	switch authType {
 	case "v3password":
+		opts = V3PasswordOpts{
+			Username:       os.Getenv("OS_USERNAME"),
+			UserID:         os.Getenv("OS_USERID"),
+			Password:       os.Getenv("OS_PASSWORD"),
+			UserDomainID:   os.Getenv("OS_USER_DOMAIN_ID"),
+			UserDomainName: os.Getenv("OS_USER_DOMAIN_NAME"),
+			Scope:          scope,
+		}
 	case "v3totp":
 	case "v3applicationcredential":
 	case "v3token":
